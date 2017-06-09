@@ -1,0 +1,75 @@
+Mazatech Software Evaluation Agreement 
+-------------------------------------- 
+
+This Evaluation Agreement (the "Agreement") is entered into by and between Mazatech S.r.l ("Licensor") with its principal place of business at Via Livatino, 2, 47020 Longiano (FC), Italy, and YOU ("Licensee", individual or entity), hereafter collectively referred to as the "Parties". 
+
+The Parties agree that: 
+
+
+1. Licensor will disclose the technology described in this Section 1, including software, related documentation and information, to Licensee under the Agreement (the "Technology") as follows: 
+
+Technology Description: 
+
+  - AmanithVG SRE v4.x, an EGL-less library for 2D vector graphics, with pure software rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code 
+
+and 
+
+  - AmanithVG GLE v4.x, an EGL-less library for 2D vector graphics, with OpenGL and OpenGL ES 1.0+ CM aided rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code. 
+
+During the term of the Agreement, Licensor may, at its sole option, provide Licensee with updates or error corrections to the Technology (collectively "Technology Updates"). If Licensor supplies Technology Updates to Licensee, the Technology Updates will be considered part of the Technology, and subject to the terms of this Agreement. 
+
+  ************************************************************************ 
+  * Please read this Agreement carefully before accessing the Technology * 
+  * media, electronically downloading, installing, starting or otherwise * 
+  * using the Technology. Any of the above actions indicate that you     * 
+  * have read all of the terms and conditions of this Agreement,         * 
+  * understand them, and agree to be legally bound to those terms and    * 
+  * conditions. Should you not accept the terms and conditions of this   * 
+  * Agreement, then please do not access or otherwise use the Technology,* 
+  * cancel the installation or downloading process, or destroy or return * 
+  * the Technology to Licensor.                                          * 
+  ************************************************************************ 
+
+
+2. Licensor grants to Licensee a non-exclusive, non-transferable, royalty-free, fully paid-up, worldwide license to internally reproduce and use the Technology, for purposes of EVALUATION ONLY.
+This license does not include the right to alter, modify, distribute, reverse 
+engineer, disassemble the Technology, or the right to derive any source code from the Technology (even for the evaluation purpose).
+This license does not include the right to obtain support, maintenance, 
+training, integration or other services. 
+
+
+3. Licensor warrants that it has the right to license the Technology to Licensee. 
+Except as set forth herein, the Technology is provided "AS IS", and all 
+representations and warranties, express or implied, including fitness for a particular purpose and merchantability are hereby disclaimed.
+Licensor does not warrant the Technology will meet Licensee's requirements, nor that the operation of the Technology will be uninterrupted or error free, nor that any errors will be corrected.
+Licensee acknowledges that Licensor has no control over Licensee's use or exploitation of the Technology. Licensee therefore agrees to indemnify and hold Licensor harmless against any costs, claims, demands, expenses and liabilities of whatsoever nature by any third party arising from such use or exploitation. In no event shall Licensor be liable for any direct, indirect, special, incidental or consequential damages arising out of the use or inability to use the Technology, even if Licensor have been advised of the likelihood of such damages occurring.
+Licensor shall not be liable for any loss, damages or costs, arising out of, but not limited to, lost profits or revenue, loss of use of the Technology or the media, loss of data or equipment, the costs of recovering the Technology, the media, data or equipment, the cost of substitute Technology, media, data or equipment or claims by third parties, or other similar costs. 
+Licensee does not acquire any rights in and to the Technology, except for the limited right to use the Technology as described in the Agreement. 
+
+
+4. This Agreement is valid from the first delivery of the Technology to Licensee and remains in effect for 2 (two) years, unless terminated under the provisions of this Agreement. Either party may terminate this Agreement by giving the other party a 6 (six) month's written notice.
+Any license provided under this Agreement may be terminated immediately by one party, if the other party, not being a company, commits any act of bankruptcy or compounds or makes any arrangement with its creditors, or if that other party is a company, is wound up, whether compulsorily or voluntarily or an Administrative Receiver, Receiver, Manager or Administrator is appointed over all or part of its property. If any license granted under this Agreement expires or is terminated in accordance with the terms of this Agreement, Licensee shall forthwith
+
+    i) Cease using the Technology, and
+
+   ii) Destroy all copies of the Technology. This requirement applies to copies of the Technology in all forms, partial and complete, on all types of media and computer memory, and whether or not modified and merged into other materials. 
+
+
+5. All notices required or permitted under this Agreement will be in writing, will reference this Agreement and will be deemed delivered when: (a) delivered personally; (b) when sent by confirmed facsimile; (c) upon receipt or refusal of receipt after having been sent by registered or certified mail, return receipt requested, postage prepaid; or (d) with a commercial overnight carrier specifying next day delivery, upon written verification of receipt or refusal of receipt. All notices will be sent to the addresses set forth below to or such other address as may be designated by a party by giving written notice to the other party pursuant to this Section: 
+
+If to Mazatech: 
+
+    Mazatech S.r.l. 
+    Attn: Matteo Muratori 
+    Via Livatino, 2 
+    47020 - Longiano (FC)
+    Italy 
+
+
+6. In the event any provision or part thereof of this Agreement is held to be invalid or unenforceable, the remaining provisions and parts of this Agreement shall remain in full force and effect. 
+The waiver by either party of any default or breach of this Agreement shall not constitute a waiver of any other or subsequent default or breach. 
+Licensee will not export, directly or indirectly, the Technology or any direct product thereof or any technical data relating to the Technology without complying with all regulations relating to such export issued by the local government. 
+Any public announcement by either party regarding this Agreement or uses of the Technology licensed under this Agreement by Licensee needs to be approved by both Parties in advance.
+This Agreement and all matters arising out or relating to this Agreement shall be governed by and interpreted in accordance with Italian law. The Parties agree to submit to the exclusive jurisdiction of the courts of Italy. However, in the event of any dispute between Licensee and Licensor under this Agreement, the Parties agree that they shall negotiate with each other in good faith in an attempt to resolve the dispute prior to any commencement of proceedings. If no solution can be found to settle the dispute within 45 days after giving written notice to the defaulting Party, then the dispute will be submitted to the Court of Forlì, Italy.
+
+I acknowledge that I have the authority to execute this Agreement on behalf of the Licensee and I further acknowledge that this Agreement constitutes a valid and legally binding obligation on the part of the Licensee. 
