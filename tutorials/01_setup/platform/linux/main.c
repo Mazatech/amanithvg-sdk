@@ -605,10 +605,12 @@ static void processEvent(XEvent *ev) {
             displayAbout = VG_FALSE;
             displayHelp = VG_FALSE;
             if (ev->xbutton.button == Button1) {
+                // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
                 mouseLeftButtonDown(ev->xbutton.x, openvgSurfaceHeightGet() - ev->xbutton.y);
             }
             else
             if ((ev->xbutton.button == Button2) || (ev->xbutton.button == Button3)) {
+                // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
                 mouseRightButtonDown(ev->xbutton.x, openvgSurfaceHeightGet() - ev->xbutton.y);
             }
             break;
@@ -617,10 +619,12 @@ static void processEvent(XEvent *ev) {
             displayAbout = VG_FALSE;
             displayHelp = VG_FALSE;
             if (ev->xbutton.button == Button1) {
-                mouseLeftButtonUp(ev->xbutton.x, ev->xbutton.y);
+                // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+                mouseLeftButtonUp(ev->xbutton.x, openvgSurfaceHeightGet() - ev->xbutton.y);
             }
             else
             if ((ev->xbutton.button == Button2) || (ev->xbutton.button == Button3)) {
+                // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
                 mouseRightButtonUp(ev->xbutton.x, openvgSurfaceHeightGet() - ev->xbutton.y);
             }
             break;
@@ -628,6 +632,7 @@ static void processEvent(XEvent *ev) {
         case MotionNotify:
             displayAbout = VG_FALSE;
             displayHelp = VG_FALSE;
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseMove(ev->xmotion.x, openvgSurfaceHeightGet() - ev->xmotion.y);
             break;
                 

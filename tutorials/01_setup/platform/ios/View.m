@@ -114,7 +114,7 @@
     // create and attach depth+stencil buffer
     glGenRenderbuffersOES(1, &sampledDepthRenderBuffer);
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
-    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, /*GL_DEPTH_COMPONENT16_OES*/GL_DEPTH24_STENCIL8_OES, width, height);
+    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_DEPTH24_STENCIL8_OES, width, height);
     glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_DEPTH_ATTACHMENT_OES, GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
     glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_STENCIL_ATTACHMENT_OES, GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
     // final checkup
@@ -388,14 +388,17 @@
     CGPoint translatedPoint = [(UIPanGestureRecognizer*)sender translationInView:self];
  
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
-        mouseLeftButtonDown((VGint)translatedPoint.x, -(VGint)translatedPoint.y);
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        mouseLeftButtonDown((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
     }
     else
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
-        mouseLeftButtonUp((VGint)translatedPoint.x, -(VGint)translatedPoint.y);
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        mouseLeftButtonUp((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
     }
     else {
-        mouseMove((VGint)translatedPoint.x, -(VGint)translatedPoint.y);
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        mouseMove((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
     }
 }
 
@@ -428,7 +431,8 @@
 
     if ([(UITapGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
         CGPoint tapPoint = [(UIGestureRecognizer*)sender locationInView:self];
-        touchDoubleTap((VGint)tapPoint.x, -(VGint)tapPoint.y);
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        touchDoubleTap((VGint)tapPoint.x, [self openvgSurfaceHeightGet] - (VGint)tapPoint.y);
     }
 }
 

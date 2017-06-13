@@ -194,7 +194,8 @@ class Tutorial {
         vg.vgAppendPathData(path, commands.length , commands, coordinates);
     }
 
-    private void genAlphaMask(int surfaceWidth, int surfaceHeight) {
+    private void genAlphaMask(int surfaceWidth,
+                              int surfaceHeight) {
 
         VGImage alphaImage = vg.vgCreateImage(VG_A_8, surfaceWidth, surfaceHeight, VG_IMAGE_QUALITY_NONANTIALIASED);
 
@@ -222,7 +223,8 @@ class Tutorial {
         }
     }
 
-    void init(int surfaceWidth, int surfaceHeight) {
+    void init(int surfaceWidth,
+              int surfaceHeight) {
 
         // an opaque dark grey
         float clearColor[] = new float[] { 0.2f, 0.3f, 0.4f, 1.0f };
@@ -268,6 +270,7 @@ class Tutorial {
         // release path
         vg.vgDestroyPath(path);
         // release paints
+        vg.vgSetPaint(null, VG_FILL_PATH | VG_STROKE_PATH);
         vg.vgDestroyPaint(color);
         vg.vgDestroyPaint(linGrad);
         vg.vgDestroyPaint(radGrad);
@@ -278,6 +281,102 @@ class Tutorial {
         vg.vgDestroyPaint(pattern);
     }
 
+    void resize(int surfaceWidth,
+                int surfaceHeight) {
+
+        // regenerate alpha mask
+        genAlphaMask(surfaceWidth, surfaceHeight);
+        // regenerate scissor rectangles
+        scissorRectsConf++;
+        toggleScissorRects(surfaceWidth, surfaceHeight);
+        // move the path back to the center
+        translation[0] = 0.0f;
+        translation[1] = 0.0f;
+        scale = 1.0f;
+    }
+
+    void draw(int surfaceWidth,
+              int surfaceHeight) {
+
+        float scaleX = (float)surfaceWidth / 512.0f;
+        float scaleY = (float)surfaceHeight / 512.0f;
+
+        if (animate) {
+            rotation += 0.2f;
+        }
+
+        // we don't want to apply scissoring to the vgClear (i.e. we want to clear the whole drawing surface)
+        vg.vgSeti(VG_SCISSORING, VG_FALSE);
+        vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
+
+        // take care to include the current 'rotation' and 'translation' during the user-to-surface path matrix construction
+        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
+        vg.vgLoadIdentity();
+        vg.vgTranslate(translation[0], translation[1]);
+        vg.vgScale(scaleX, scaleY);
+        vg.vgTranslate(256.0f, 256.0f);
+        vg.vgScale(scale, scale);
+        vg.vgRotate(rotation);
+        vg.vgTranslate(-256.0f, -256.0f);
+
+        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
+        vg.vgLoadIdentity();
+        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
+        vg.vgLoadIdentity();
+
+        switch (paintIndex) {
+
+            case PAINT_COLOR:
+                vg.vgSetPaint(color, VG_FILL_PATH | VG_STROKE_PATH);
+                break;
+
+            case PAINT_LINGRAD:
+                vg.vgSetPaint(linGrad, VG_FILL_PATH | VG_STROKE_PATH);
+                break;
+
+            case PAINT_RADGRAD:
+                vg.vgSetPaint(radGrad, VG_FILL_PATH | VG_STROKE_PATH);
+                break;
+
+            case PAINT_CONGRAD:
+                if (conGradSupported) {
+                    vg.vgSetPaint(conGrad, VG_FILL_PATH | VG_STROKE_PATH);
+                }
+                else {
+                    vg.vgSetPaint(pattern, VG_FILL_PATH | VG_STROKE_PATH);
+                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
+                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
+                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
+                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
+                }
+                break;
+
+            case PAINT_PATTERN:
+                if (conGradSupported) {
+                    vg.vgSetPaint(pattern, VG_FILL_PATH | VG_STROKE_PATH);
+                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
+                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
+                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
+                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
+                }
+                break;
+
+            default:
+                vg.vgSetPaint(color, VG_FILL_PATH | VG_STROKE_PATH);
+                break;
+        }
+
+        // set scissoring
+        vg.vgSeti(VG_SCISSORING, scissoring);
+        // set alpha mask
+        vg.vgSeti(VG_MASKING, masking);
+        // draw the flower path
+        vg.vgDrawPath(path, VG_FILL_PATH);
+    }
+
+    /*****************************************************************
+                            interactive options
+    *****************************************************************/
     void togglePaint() {
 
         paintIndex = (conGradSupported) ? ((paintIndex + 1) % 5) : ((paintIndex + 1) % 4);
@@ -392,7 +491,8 @@ class Tutorial {
         scissoring = !scissoring;
     }
 
-    void toggleScissorRects(int surfaceWidth, int surfaceHeight) {
+    void toggleScissorRects(int surfaceWidth,
+                            int surfaceHeight) {
 
         // first set of scissor rectangles
         int scsRectsCfg0[] = new int[] {
@@ -426,7 +526,11 @@ class Tutorial {
         masking = !masking;
     }
 
-    void touchDrag(float dx, float dy) {
+    /*****************************************************************
+                            handle touch events
+    *****************************************************************/
+    void touchDrag(float dx,
+                   float dy) {
 
         translation[0] += dx;
         translation[1] += dy;
@@ -442,96 +546,5 @@ class Tutorial {
         if (scale > 50.000f) {
             scale = 50.000f;
         }
-    }
-
-    void resize(int surfaceWidth, int surfaceHeight) {
-
-        // regenerate alpha mask
-        genAlphaMask(surfaceWidth, surfaceHeight);
-        // regenerate scissor rectangles
-        scissorRectsConf++;
-        toggleScissorRects(surfaceWidth, surfaceHeight);
-        // move the path back to the center
-        translation[0] = 0.0f;
-        translation[1] = 0.0f;
-        scale = 1.0f;
-    }
-
-    void draw(int surfaceWidth, int surfaceHeight) {
-
-        float scaleX = (float)surfaceWidth / 512.0f;
-        float scaleY = (float)surfaceHeight / 512.0f;
-
-        if (animate) {
-            rotation += 0.2f;
-        }
-
-        // we don't want to apply scissoring to the vgClear (i.e. we want to clear the whole drawing surface)
-        vg.vgSeti(VG_SCISSORING, VG_FALSE);
-        vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
-
-        // take care to include the current 'rotation' and 'translation' during the user-to-surface path matrix construction
-        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
-        vg.vgLoadIdentity();
-        vg.vgTranslate(translation[0], translation[1]);
-        vg.vgScale(scaleX, scaleY);
-        vg.vgTranslate(256.0f, 256.0f);
-        vg.vgScale(scale, scale);
-        vg.vgRotate(rotation);
-        vg.vgTranslate(-256.0f, -256.0f);
-
-        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
-        vg.vgLoadIdentity();
-        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
-        vg.vgLoadIdentity();
-
-        switch (paintIndex) {
-
-            case PAINT_COLOR:
-                vg.vgSetPaint(color, VG_FILL_PATH | VG_STROKE_PATH);
-                break;
-
-            case PAINT_LINGRAD:
-                vg.vgSetPaint(linGrad, VG_FILL_PATH | VG_STROKE_PATH);
-                break;
-
-            case PAINT_RADGRAD:
-                vg.vgSetPaint(radGrad, VG_FILL_PATH | VG_STROKE_PATH);
-                break;
-
-            case PAINT_CONGRAD:
-                if (conGradSupported) {
-                    vg.vgSetPaint(conGrad, VG_FILL_PATH | VG_STROKE_PATH);
-                }
-                else {
-                    vg.vgSetPaint(pattern, VG_FILL_PATH | VG_STROKE_PATH);
-                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
-                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
-                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
-                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
-                }
-                break;
-
-            case PAINT_PATTERN:
-                if (conGradSupported) {
-                    vg.vgSetPaint(pattern, VG_FILL_PATH | VG_STROKE_PATH);
-                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
-                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
-                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_STROKE_PAINT_TO_USER);
-                    vg.vgTranslate((512.0f - (float)PATTERN_WIDTH) * 0.5f, (512.0f - (float)PATTERN_HEIGHT) * 0.5f);
-                }
-                break;
-
-            default:
-                vg.vgSetPaint(color, VG_FILL_PATH | VG_STROKE_PATH);
-                break;
-        }
-
-        // set scissoring
-        vg.vgSeti(VG_SCISSORING, scissoring);
-        // set alpha mask
-        vg.vgSeti(VG_MASKING, masking);
-        // draw the flower path
-        vg.vgDrawPath(path, VG_FILL_PATH);
     }
 }

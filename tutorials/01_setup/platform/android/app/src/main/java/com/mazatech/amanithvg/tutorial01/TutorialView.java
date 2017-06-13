@@ -578,11 +578,11 @@ public class TutorialView extends GLSurfaceView {
         // we start with a minimum size of 4 bits for red/green/blue, but will perform actual matching in chooseConfig() below.
         private static int EGL_OPENGL_ES_BIT = 1;
         private static int[] configAttribs = {
-                EGL10.EGL_RED_SIZE, 4,
-                EGL10.EGL_GREEN_SIZE, 4,
-                EGL10.EGL_BLUE_SIZE, 4,
-                EGL10.EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
-                EGL10.EGL_NONE
+            EGL10.EGL_RED_SIZE, 4,
+            EGL10.EGL_GREEN_SIZE, 4,
+            EGL10.EGL_BLUE_SIZE, 4,
+            EGL10.EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
+            EGL10.EGL_NONE
         };
     }
 

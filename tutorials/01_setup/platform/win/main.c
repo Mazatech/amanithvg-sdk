@@ -182,27 +182,27 @@ LRESULT CALLBACK windowMessagesHandler(HWND hWnd,
             return 0;
 
         case WM_LBUTTONDOWN:
-            // we apply a flip on y direction in order to be consistent with the OpenVG coordinate system
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseLeftButtonDown(LOWORD(lParam), openvgSurfaceHeightGet() - HIWORD(lParam));
             return 0;
 
         case WM_RBUTTONDOWN:
-            // we apply a flip on y direction in order to be consistent with the OpenVG coordinate system
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseRightButtonDown(LOWORD(lParam), openvgSurfaceHeightGet() - HIWORD(lParam));
             return 0;
         
         case WM_LBUTTONUP:
-            // we apply a flip on y direction in order to be consistent with the OpenVG coordinate system
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseLeftButtonUp(LOWORD(lParam), openvgSurfaceHeightGet() - HIWORD(lParam));
             return 0;
 
         case WM_RBUTTONUP:
-            // we apply a flip on y direction in order to be consistent with the OpenVG coordinate system
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseRightButtonUp(LOWORD(lParam), openvgSurfaceHeightGet() - HIWORD(lParam));
             return 0;
 
         case WM_MOUSEMOVE:
-            // we apply a flip on y direction in order to be consistent with the OpenVG coordinate system
+            // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
             mouseMove(LOWORD(lParam), openvgSurfaceHeightGet() - HIWORD(lParam));
             return 0;
     }

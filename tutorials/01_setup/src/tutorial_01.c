@@ -13,7 +13,6 @@
 ** For any information, please contact info@mazatech.com
 **
 ****************************************************************************/
-
 #include "tutorial_01.h"
 #include <stdlib.h>
 #include <string.h>
@@ -289,6 +288,7 @@ void tutorialDestroy(void) {
     // release path
     vgDestroyPath(path);
     // release paints
+    vgSetPaint(VG_INVALID_HANDLE, VG_FILL_PATH | VG_STROKE_PATH);
     vgDestroyPaint(color);
     vgDestroyPaint(linGrad);
     vgDestroyPaint(radGrad);
