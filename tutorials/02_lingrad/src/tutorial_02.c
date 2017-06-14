@@ -358,7 +358,7 @@ void mouseMove(const VGint x,
 
     // keep track of current mouse position
     oldMouseX = x;
-    oldMouseY = y
+    oldMouseY = y;
 }
 
 /*****************************************************************
