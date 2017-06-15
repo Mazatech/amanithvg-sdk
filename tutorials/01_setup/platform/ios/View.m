@@ -284,12 +284,18 @@
 
 - (void) blitTextureDraw {
 
+    // get AmanithVG surface dimensions and pixels pointer
+    VGint surfaceWidth = [self openvgSurfaceWidthGet];
+    VGint surfaceHeight = [self openvgSurfaceHeightGet];
+    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
+    const VGfloat w = (VGfloat)surfaceWidth / (VGfloat)colorRenderBufferWidth;
+    const VGfloat h = (VGfloat)surfaceHeight / (VGfloat)colorRenderBufferHeight;
     // 4 vertices
-    static const GLfloat xy[] = {
+    const GLfloat xy[] = {
         -1.0f, -1.0f,
-         1.0f, -1.0f,
-        -1.0f,  1.0f,
-         1.0f,  1.0f
+        -1.0f + (w * 2.0f), -1.0f,
+        -1.0f, -1.0f + (h * 2.0f),
+        -1.0f + (w * 2.0f), -1.0f + (h * 2.0f)
     };
     static const GLfloat uv[] = {
         0.0f, 1.0f,
@@ -297,10 +303,6 @@
         0.0f, 0.0f,
         1.0f, 0.0f
     };
-    // get AmanithVG surface dimensions and pixels pointer
-    VGint surfaceWidth = [self openvgSurfaceWidthGet];
-    VGint surfaceHeight = [self openvgSurfaceHeightGet];
-    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
     
     glClear(GL_COLOR_BUFFER_BIT);
     // simply put a quad, covering the whole window
@@ -389,16 +391,16 @@
  
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
-        mouseLeftButtonDown((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
+        mouseLeftButtonDown((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
     else
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
-        mouseLeftButtonUp((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
+        mouseLeftButtonUp((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
     else {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
-        mouseMove((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
+        mouseMove((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
 }
 
@@ -433,7 +435,7 @@
         tapPoint.x *= [[UIScreen mainScreen] scale];
         tapPoint.y *= [[UIScreen mainScreen] scale];
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
-        touchDoubleTap((VGint)tapPoint.x, [self openvgSurfaceHeightGet] - (VGint)tapPoint.y);
+        touchDoubleTap((VGint)tapPoint.x, colorRenderBufferHeight - (VGint)tapPoint.y);
     }
 }
 

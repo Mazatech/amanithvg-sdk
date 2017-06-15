@@ -305,7 +305,7 @@
     };
     
     glClear(GL_COLOR_BUFFER_BIT);
-    // simply put a quad, covering the whole window
+    // simply put a quad, covering the OpenVG surface area
     glBindTexture(GL_TEXTURE_2D, blitTexture);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, surfaceWidth, surfaceHeight, GL_BGRA, GL_UNSIGNED_BYTE, surfacePixels);
     glEnable(GL_TEXTURE_2D);
@@ -388,7 +388,7 @@
     CGPoint translatedPoint = [(UIPanGestureRecognizer*)sender locationInView:self];
     translatedPoint.x *= [[UIScreen mainScreen] scale];
     translatedPoint.y *= [[UIScreen mainScreen] scale];
- 
+
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         mouseLeftButtonDown((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
@@ -400,6 +400,7 @@
     }
     else {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        //mouseMove((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
         mouseMove((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
 }
@@ -454,7 +455,8 @@
                 [self setMultipleTouchEnabled:YES];
                 [self gesturesSetup];
                 // init OpenVG
-                if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
+                //if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
+                if ([self openvgInit :1100 :900]) {
                 #ifdef AM_SRE
                     // set basic OpenGL states and viewport
                     [self glesInit];
