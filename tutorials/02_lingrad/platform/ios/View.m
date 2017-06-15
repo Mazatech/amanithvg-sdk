@@ -323,8 +323,6 @@
     tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
     // blit AmanithVG drawing surface, using a texture
     [self blitTextureDraw];
-    // flush OpenGL commands
-    //glFinish();
 #else
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
     // draw OpenVG content
@@ -385,7 +383,9 @@
 
 - (void) move :(id)sender {
 
-    CGPoint translatedPoint = [(UIPanGestureRecognizer*)sender translationInView:self];
+    CGPoint translatedPoint = [(UIPanGestureRecognizer*)sender locationInView:self];
+    translatedPoint.x *= [[UIScreen mainScreen] scale];
+    translatedPoint.y *= [[UIScreen mainScreen] scale];
  
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
@@ -417,7 +417,6 @@
 - (void) rotate :(id)sender {
  
     if ([(UIRotationGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
-        //lastRotation = 0.0;
         lastRotation = [(UIRotationGestureRecognizer*)sender rotation];
     }
     else {
@@ -431,6 +430,8 @@
 
     if ([(UITapGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
         CGPoint tapPoint = [(UIGestureRecognizer*)sender locationInView:self];
+        tapPoint.x *= [[UIScreen mainScreen] scale];
+        tapPoint.y *= [[UIScreen mainScreen] scale];
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         touchDoubleTap((VGint)tapPoint.x, [self openvgSurfaceHeightGet] - (VGint)tapPoint.y);
     }
@@ -460,10 +461,6 @@
                 #endif
                     // init tutorial application (OpenVG related code)
                     tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-                    // start with repeat spread mode
-                    toggleSpreadMode();
-                    // start with repeat tiling mode
-                    toggleTilingMode();
                 }
                 else {
                     NSLog(@"Unable to initialize AmanithVG");

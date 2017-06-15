@@ -84,6 +84,17 @@ class Tutorial {
         smoothRampSupported = extensions.contains("VG_MZT_color_ramp_interpolation");
     }
 
+    // calculate the distance between two points
+    private float distance(float x0,
+                           float y0,
+                           float x1,
+                           float y1) {
+
+        float dx = x0 - x1;
+        float dy = y0 - y1;
+        return (float)Math.hypot(dx, dy);
+    }
+
     // calculate "path user to surface" transformation
     private void userToSurfaceCalc(int surfaceWidth,
                                    int surfaceHeight) {
@@ -128,6 +139,15 @@ class Tutorial {
         vg.vgSetParameterfv(linGrad, VG_PAINT_LINEAR_GRADIENT, 4, linGradParams);
     }
 
+    // reset gradient parameters
+    private void gradientParamsReset(final int surfaceWidth,
+                                     final int surfaceHeight) {
+
+        float[] gradStart = new float[] { (float)surfaceWidth * 0.25f, (float)surfaceHeight * 0.5f };
+        float[] gradEnd = new float[] { (Gfloat)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
+        gradientParamsSet(gradStart, gradEnd);
+    }
+
     private void genPaints() {
 
         float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -168,8 +188,6 @@ class Tutorial {
 
         // an opaque dark grey
         float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
-        float gradStart[] = new float[] { (float)surfaceWidth * 0.25f, (float)surfaceHeight * 0.5f };
-        float gradEnd[] = new float[] { (float)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -185,7 +203,8 @@ class Tutorial {
         genPaths();
         // generate paints
         genPaints();
-        gradientParamsSet(gradStart, gradEnd);
+        // reset gradient parameters
+        gradientParamsReset(surfaceWidth, surfaceHeight);
         // set some default parameters for the OpenVG context
         vg.vgSeti(VG_FILL_RULE, VG_EVEN_ODD);
         vg.vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
@@ -208,13 +227,10 @@ class Tutorial {
     void resize(int surfaceWidth,
                 int surfaceHeight) {
 
-        float gradStart[] = new float[] { (float)surfaceWidth * 0.25f, (float)surfaceHeight * 0.5f };
-        float gradEnd[] = new float[] { (float)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
-
         // calculate "path user to surface" transformation
         userToSurfaceCalc(surfaceWidth, surfaceHeight);
         // reset gradient parameters
-        gradientParamsSet(gradStart, gradEnd);
+        gradientParamsReset(surfaceWidth, surfaceHeight);
         pickedControlPoint = CONTROL_POINT_NONE;
     }
 
@@ -293,20 +309,20 @@ class Tutorial {
     void touchDown(float x,
                    float y) {
 
-        float dist0, dist1;
+        float distStart, distEnd;
         float gradStart[] = new float[2];
         float gradEnd[] = new float[2];
 
         // get current gradient parameters
         gradientParamsGet(gradStart, gradEnd);
-        dist0 = ((x - gradStart[X_COORD]) * (x - gradStart[X_COORD])) + ((y - gradStart[Y_COORD]) * (y - gradStart[Y_COORD]));
-        dist1 = ((x - gradEnd[X_COORD]) * (x - gradEnd[X_COORD])) + ((y - gradEnd[Y_COORD]) * (y - gradEnd[Y_COORD]));
+        distStart = distance(mouseX, mouseY, gradStart[X_COORD], gradStart[Y_COORD]);
+        distEnd = distance(mouseX, mouseY, gradEnd[X_COORD], gradEnd[Y_COORD]);
         // check if we have picked a gradient control point
-        if (dist0 < dist1) {
-            pickedControlPoint = (dist0 < (controlPointsRadius * controlPointsRadius)) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
+        if (distStart < distEnd) {
+            pickedControlPoint = (distStart < controlPointsRadius) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (dist1 < (controlPointsRadius * controlPointsRadius)) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
+            pickedControlPoint = (distEnd < controlPointsRadius) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
         oldTouchX = x;

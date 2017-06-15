@@ -83,6 +83,17 @@ static void extensionsCheck(void) {
     smoothRampSupported = extensionFind("VG_MZT_color_ramp_interpolation", extensions);
 }
 
+// calculate the distance between two points
+static VGfloat distance(const VGfloat x0,
+                        const VGfloat y0,
+                        const VGfloat x1,
+                        const VGfloat y1) {
+
+    VGfloat dx = x0 - x1;
+    VGfloat dy = y0 - y1;
+    return (VGfloat)hypot(dx, dy);
+}
+
 // calculate "path user to surface" transformation
 static void userToSurfaceCalc(const VGint surfaceWidth,
                               const VGint surfaceHeight) {
@@ -127,6 +138,15 @@ static void gradientParamsSet(const VGfloat srfStartPoint[],
     vgSetParameterfv(linGrad, VG_PAINT_LINEAR_GRADIENT, 4, linGradParams);
 }
 
+// reset gradient parameters
+static void gradientParamsReset(const VGint surfaceWidth,
+                                const VGint surfaceHeight) {
+
+    VGfloat gradStart[2] = { (VGfloat)surfaceWidth * 0.25f, (VGfloat)surfaceHeight * 0.5f };
+    VGfloat gradEnd[2] = { (VGfloat)surfaceWidth * 0.75f, (VGfloat)surfaceHeight * 0.5f };
+    gradientParamsSet(gradStart, gradEnd);
+}
+
 static void genPaints(void) {
 
     VGfloat white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -167,11 +187,9 @@ void tutorialInit(const VGint surfaceWidth,
 
     // an opaque dark grey
     VGfloat clearColor[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    VGfloat gradStart[2] = { (VGfloat)surfaceWidth * 0.25f, (VGfloat)surfaceHeight * 0.5f };
-    VGfloat gradEnd[2] = { (VGfloat)surfaceWidth * 0.75f, (VGfloat)surfaceHeight * 0.5f };
 
     // make sure to have well visible (and draggable) control points
-    controlPointsRadius = ((float)((surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight) / 512.0f) * 14.0f;
+    controlPointsRadius = ((VGfloat)((surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight) / 512.0f) * 14.0f;
     if (controlPointsRadius < 14.0f) {
         controlPointsRadius = 14.0f;
     }
@@ -184,7 +202,8 @@ void tutorialInit(const VGint surfaceWidth,
     genPaths();
     // generate paints
     genPaints();
-    gradientParamsSet(gradStart, gradEnd);
+    // reset gradient parameters
+    gradientParamsReset(surfaceWidth, surfaceHeight);
     // set some default parameters for the OpenVG context
     vgSeti(VG_FILL_RULE, VG_EVEN_ODD);
     vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
@@ -207,13 +226,10 @@ void tutorialDestroy(void) {
 void tutorialResize(const VGint surfaceWidth,
                     const VGint surfaceHeight) {
 
-    VGfloat gradStart[2] = { (VGfloat)surfaceWidth * 0.25f, (VGfloat)surfaceHeight * 0.5f };
-    VGfloat gradEnd[2] = { (VGfloat)surfaceWidth * 0.75f, (VGfloat)surfaceHeight * 0.5f };
-
     // calculate "path user to surface" transformation
     userToSurfaceCalc(surfaceWidth, surfaceHeight);
     // reset gradient parameters
-    gradientParamsSet(gradStart, gradEnd);
+    gradientParamsReset(surfaceWidth, surfaceHeight);
     pickedControlPoint = CONTROL_POINT_NONE;
 }
 
@@ -292,20 +308,21 @@ void mouseLeftButtonDown(const VGint x,
                          const VGint y) {
 
     VGfloat gradStart[2], gradEnd[2];
-    VGfloat dist0, dist1;
+    VGfloat distStart, distEnd;
     VGfloat mouseX = (VGfloat)x;
     VGfloat mouseY = (VGfloat)y;
 
     // get current gradient parameters
     gradientParamsGet(gradStart, gradEnd);
-    dist0 = ((mouseX - gradStart[X_COORD]) * (mouseX - gradStart[X_COORD])) + ((mouseY - gradStart[Y_COORD]) * (mouseY - gradStart[Y_COORD]));
-    dist1 = ((mouseX - gradEnd[X_COORD]) * (mouseX - gradEnd[X_COORD])) + ((mouseY - gradEnd[Y_COORD]) * (mouseY - gradEnd[Y_COORD]));
+    // calculate mouse distance from gradient points
+    distStart = distance(mouseX, mouseY, gradStart[X_COORD], gradStart[Y_COORD]);
+    distEnd = distance(mouseX, mouseY, gradEnd[X_COORD], gradEnd[Y_COORD]);
     // check if we have picked a gradient control point
-    if (dist0 < dist1) {
-        pickedControlPoint = (dist0 < (controlPointsRadius * controlPointsRadius)) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
+    if (distStart < distEnd) {
+        pickedControlPoint = (distStart < controlPointsRadius) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
     }
     else {
-        pickedControlPoint = (dist1 < (controlPointsRadius * controlPointsRadius)) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
+        pickedControlPoint = (distEnd < controlPointsRadius) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
     }
     // keep track of current mouse position
     oldMouseX = x;

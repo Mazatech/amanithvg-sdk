@@ -53,7 +53,6 @@
     // touch events
     float lastScale;
     float lastRotation;
-    //float lastMoveX, lastMoveY;
 }
 
 @end

@@ -620,7 +620,6 @@ public class TutorialView extends GLSurfaceView {
 
             case MotionEvent.ACTION_UP:
                 tutorialTouchUp(event.getX(), event.getY());
-                //touchMode = TOUCH_MODE_NONE;
                 break;
 
             case MotionEvent.ACTION_MOVE:
