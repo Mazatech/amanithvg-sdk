@@ -455,8 +455,7 @@
                 [self setMultipleTouchEnabled:YES];
                 [self gesturesSetup];
                 // init OpenVG
-                //if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
-                if ([self openvgInit :1100 :900]) {
+                if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
                 #ifdef AM_SRE
                     // set basic OpenGL states and viewport
                     [self glesInit];
