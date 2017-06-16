@@ -427,6 +427,8 @@ public class TutorialView extends GLSurfaceView {
         // get AmanithVG surface dimensions
         int surfaceWidth = openvgSurfaceWidthGet();
         int surfaceHeight = openvgSurfaceHeightGet();
+        float w = (float)surfaceWidth / (float)getWidth();
+        float h = (float)surfaceHeight / (float)getHeight();
 
         if (npotSupport) {
             u = 1.0f;
@@ -442,9 +444,9 @@ public class TutorialView extends GLSurfaceView {
 
         // geometric coordinates
         xy[0] = -1.0f;  xy[1] = -1.0f;
-        xy[2] =  1.0f;  xy[3] = -1.0f;
-        xy[4] = -1.0f;  xy[5] =  1.0f;
-        xy[6] =  1.0f;  xy[7] =  1.0f;
+        xy[2] =  -1.0f + (w * 2.0f);  xy[3] = -1.0f;
+        xy[4] = -1.0f;  xy[5] =  -1.0f + (h * 2.0f);
+        xy[6] =  -1.0f + (w * 2.0f);  xy[7] =  -1.0f + (h * 2.0f);
         // texture coordinates
         uv[0] = 0.0f;  uv[1] =    v;
         uv[2] =    u;  uv[3] =    v;
