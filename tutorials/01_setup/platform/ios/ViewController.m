@@ -27,24 +27,4 @@
     self.view = glView;
 }
 
-/*
-
--  (UIInterfaceOrientation) preferredInterfaceOrientationForPresentation {
-    
-    return UIInterfaceOrientationPortrait;
-}
-
-- (UIInterfaceOrientationMask) supportedInterfaceOrientations {
-    
-    return UIInterfaceOrientationMaskPortrait;
-}
-
-- (void) willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
-}
-
-- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
-}
-
-*/
-
 @end

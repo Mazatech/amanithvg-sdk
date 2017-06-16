@@ -81,10 +81,9 @@
     // final checkup
     status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
     if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"Failed to build a complete framebuffer object; status code: %x", status);
+        NSLog(@"glesFrameBufferCreate: failed to build a complete framebuffer object; status code: %x", status);
         return VG_FALSE;
     }
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
 #else
     // resolved framebuffer
     glGenFramebuffersOES(1, &resolvedFrameBuffer);
@@ -97,7 +96,7 @@
     // final checkup
     status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
     if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"Failed to build complete a framebuffer object; status code: %x", status);
+        NSLog(@"glesFrameBufferCreate: failed to build a complete framebuffer object; status code: %x", status);
         return VG_FALSE;
     }
     // retrieve the height and width of the color renderbuffer
@@ -217,6 +216,7 @@
         return VG_FALSE;
     }
 
+    vgInitialized = VG_TRUE;
     return VG_TRUE;
 }
 
@@ -342,6 +342,82 @@
     vgPostSwapBuffersMZT();
 }
 
+- (VGboolean)resizeFromLayer:(CAEAGLLayer *)layer {
+
+    GLenum status;
+    GLint glWidth, glHeight;
+    VGint vgWidth, vgHeight;
+
+#ifdef AM_SRE
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
+    [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:layer];
+    // retrieve the height and width of the color renderbuffer
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &glWidth);
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &glHeight);
+    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
+    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
+        NSLog(@"resizeFromLayer: failed to resize the framebuffer object; status code: %x", status);
+        return VG_FALSE;
+    }
+#else
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, resolvedFrameBuffer);
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
+    [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:layer];
+    // retrieve the height and width of the color renderbuffer
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &glWidth);
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &glHeight);
+    // final checkup
+    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
+    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
+        NSLog(@"resizeFromLayer: failed to resize the framebuffer object; status code: %x", status);
+        return VG_FALSE;
+    }
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
+    // resize sampled color buffer
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
+    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_RGBA8_OES, glWidth, glHeight);
+    // resize depth and stencil buffers
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
+    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_DEPTH24_STENCIL8_OES, glWidth, glHeight);
+    // final checkup
+    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
+    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
+        NSLog(@"resizeFromLayer: failed to resize the multi-sampled framebuffer object; status code: %x", status);
+        return VG_FALSE;
+    }
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
+#endif
+
+    // resize AmanithVG surface
+    vgPrivSurfaceResizeMZT(vgWindowSurface, glWidth, glHeight);
+    vgWidth = [self openvgSurfaceWidthGet];
+    vgHeight = [self openvgSurfaceHeightGet];
+#ifdef AM_SRE
+    [self blitTextureResize :vgWidth :vgHeight];
+#endif    
+
+    // inform tutorial that surface has been resized
+    tutorialResize(vgWidth, vgHeight);
+
+    // set viewport
+    glViewport(0, 0, glWidth, glHeight);
+    // keep track of color buffer dimensions
+    colorRenderBufferWidth = glWidth;
+    colorRenderBufferHeight = glHeight;
+    return VG_TRUE;
+}
+
+// if our view is resized, we'll be asked to layout subviews: this is the perfect opportunity to also update
+// the framebuffer so that it is the same size as our display area
+-(void)layoutSubviews {
+
+    [EAGLContext setCurrentContext:eaglContext];
+    if (vgInitialized) {
+        [self resizeFromLayer:(CAEAGLLayer*)self.layer];
+    }
+}
+
 - (void) displayLinkCreate {
 
     displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(render:)];
@@ -400,7 +476,6 @@
     }
     else {
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
-        //mouseMove((VGint)translatedPoint.x, [self openvgSurfaceHeightGet] - (VGint)translatedPoint.y);
         mouseMove((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
 }
@@ -442,6 +517,7 @@
 
 - (id) initWithFrame :(CGRect)frame {
 
+    vgInitialized = VG_FALSE;
     self = [super initWithFrame:frame];
 
     if (self) {

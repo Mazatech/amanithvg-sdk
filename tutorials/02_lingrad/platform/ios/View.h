@@ -44,11 +44,13 @@
 #endif
     int colorRenderBufferWidth;
     int colorRenderBufferHeight;
+    // keep track of OpenVG initialization
+    VGboolean vgInitialized;
     // OpenVG context
     void* vgContext;
     // OpenVG surface
     void* vgWindowSurface;
-    // OpenGL texture used to blit the AmanithVG surface
+    // OpenGL texture used to blit the AmanithVG SRE surface
     GLuint blitTexture;
     // touch events
     float lastScale;
