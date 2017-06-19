@@ -13,7 +13,7 @@
  ** For any information, please contact info@mazatech.com
  **
  ****************************************************************************/
-package com.mazatech.amanithvg.tutorial02;
+package com.mazatech.amanithvg.tutorial04;
 
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
@@ -32,10 +32,11 @@ class Tutorial {
     private float controlPointsRadius;
     // paint objects
     private VGPaint solidCol;
-    private VGPaint linGrad;
-    // linear gradient parameters
-    private float[] linGradStart;
-    private float[] linGradEnd;
+    private VGPaint conGrad;
+    // conical gradient parameters
+    private float[] conGradCenter;
+    private float[] conGradTarget;
+    private float conGradRepeats;
     // current paint states
     private boolean linearInterpolation;
     private boolean smoothRampSupported;
@@ -56,14 +57,15 @@ class Tutorial {
     private static final int Y_COORD = 1;
 
     private static final int CONTROL_POINT_NONE = 0;
-    private static final int CONTROL_POINT_START = 1;
-    private static final int CONTROL_POINT_END = 2;
+    private static final int CONTROL_POINT_CENTER = 1;
+    private static final int CONTROL_POINT_TARGET = 2;
 
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
-        linGradStart = new float[] { 0.0f, 0.0f };
-        linGradEnd = new float[] { 0.0f, 0.0f };
+        conGradCenter = new float[] { 0.0f, 0.0f };
+        conGradTarget = new float[] { 0.0f, 0.0f };
+        conGradRepeats = 2.0f;
         linearInterpolation = true;
         smoothRampSupported = false;
         spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
@@ -106,46 +108,47 @@ class Tutorial {
         userToSurfaceTranslation[Y_COORD] = (float)(surfaceHeight / 2);
     }
 
-    // calculate the position of linear gradient control points, in surface space
-    private void gradientParamsGet(float[] srfStartPoint,
-                                   float[] srfEndPoint) {
+    // calculate the position of conical gradient control points, in surface space
+    private void gradientParamsGet(float[] srfCenterPoint,
+                                   float[] srfTargetPoint) {
 
         // start point (apply the "path user to surface" transformation)
-        srfStartPoint[X_COORD] = (linGradStart[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfStartPoint[Y_COORD] = (linGradStart[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
-        // end point (apply the "path user to surface" transformation)
-        srfEndPoint[X_COORD] = (linGradEnd[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfEndPoint[Y_COORD] = (linGradEnd[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfCenterPoint[X_COORD] = (conGradCenter[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
+        srfCenterPoint[Y_COORD] = (conGradCenter[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        // target point (apply the "path user to surface" transformation)
+        srfTargetPoint[X_COORD] = (conGradTarget[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
+        srfTargetPoint[Y_COORD] = (conGradTarget[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
     }
 
-    // set the position of linear gradient control points, in surface space
-    private void gradientParamsSet(final float[] srfStartPoint,
-                                   final float[] srfEndPoint) {
+    // set the position of conical gradient control points, in surface space
+    private void gradientParamsSet(final float[] srfCenterPoint,
+                                   final float[] srfTargetPoint) {
 
-        // linear gradient parameters
-        float linGradParams[] = new float[4];
+        // conical gradient parameters
+        float conGradParams[] = new float[5];
 
         // apply the inverse "path user to surface" transformation
-        linGradStart[X_COORD] = (srfStartPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        linGradStart[Y_COORD] = (srfStartPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
-        linGradEnd[X_COORD] = (srfEndPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        linGradEnd[Y_COORD] = (srfEndPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
+        conGradCenter[X_COORD] = (srfCenterPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
+        conGradCenter[Y_COORD] = (srfCenterPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
+        conGradTarget[X_COORD] = (srfTargetPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
+        conGradTarget[Y_COORD] = (srfTargetPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
 
         // upload new gradient parameters to the OpenVG backend
-        linGradParams[0] = linGradStart[X_COORD];
-        linGradParams[1] = linGradStart[Y_COORD];
-        linGradParams[2] = linGradEnd[X_COORD];
-        linGradParams[3] = linGradEnd[Y_COORD];
-        vg.vgSetParameterfv(linGrad, VG_PAINT_LINEAR_GRADIENT, 4, linGradParams);
+        conGradParams[0] = conGradCenter[X_COORD];
+        conGradParams[1] = conGradCenter[Y_COORD];
+        conGradParams[2] = conGradTarget[X_COORD];
+        conGradParams[3] = conGradTarget[Y_COORD];
+        conGradParams[4] = conGradRepeats;
+        vg.vgSetParameterfv(conGrad, VG_PAINT_CONICAL_GRADIENT_MZT, 5, conGradParams);
     }
 
     // reset gradient parameters
     private void gradientParamsReset(final int surfaceWidth,
                                      final int surfaceHeight) {
 
-        float[] gradStart = new float[] { (float)surfaceWidth * 0.25f, (float)surfaceHeight * 0.5f };
-        float[] gradEnd = new float[] { (Gfloat)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
-        gradientParamsSet(gradStart, gradEnd);
+        float[] gradCenter = new float[] { (float)surfaceWidth * 0.5f, (float)surfaceHeight * 0.5f };
+        float[] gradTarget = new float[] { (float)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
+        gradientParamsSet(gradCenter, gradTarget);
     }
 
     private void genPaints() {
@@ -163,19 +166,19 @@ class Tutorial {
         solidCol = vg.vgCreatePaint();
         vg.vgSetParameteri(solidCol, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
         vg.vgSetParameterfv(solidCol, VG_PAINT_COLOR, 4, white);
-        // create linear gradient
-        linGrad = vg.vgCreatePaint();
-        vg.vgSetParameteri(linGrad, VG_PAINT_TYPE, VG_PAINT_TYPE_LINEAR_GRADIENT);
-        vg.vgSetParameterfv(linGrad, VG_PAINT_COLOR_RAMP_STOPS, 25, colKeys);
-        vg.vgSetParameteri(linGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
+        // create conical gradient
+        conGrad = vg.vgCreatePaint();
+        vg.vgSetParameteri(conGrad, VG_PAINT_TYPE, VG_PAINT_TYPE_CONICAL_GRADIENT_MZT);
+        vg.vgSetParameterfv(conGrad, VG_PAINT_COLOR_RAMP_STOPS, 25, colKeys);
+        vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
         if (smoothRampSupported) {
-            vg.vgSetParameteri(linGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, linearInterpolation ? VG_COLOR_RAMP_INTERPOLATION_LINEAR_MZT : VG_COLOR_RAMP_INTERPOLATION_SMOOTH_MZT);
+            vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, linearInterpolation ? VG_COLOR_RAMP_INTERPOLATION_LINEAR_MZT : VG_COLOR_RAMP_INTERPOLATION_SMOOTH_MZT);
         }
     }
 
     private void genPaths() {
 
-        // create the circle that will be filled by the linear gradient paint
+        // create the circle that will be filled by the conical gradient paint
         filledCircle = vg.vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
         vg.vguEllipse(filledCircle, 0.0f, 0.0f, 2.0f, 2.0f);
         // create the draggable gradient point
@@ -221,7 +224,7 @@ class Tutorial {
         // release paints
         vg.vgSetPaint(null, VG_FILL_PATH | VG_STROKE_PATH);
         vg.vgDestroyPaint(solidCol);
-        vg.vgDestroyPaint(linGrad);
+        vg.vgDestroyPaint(conGrad);
     }
 
     void resize(int surfaceWidth,
@@ -237,8 +240,8 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        float gradStart[] = new float[2];
-        float gradEnd[] = new float[2];
+        float gradCenter[] = new float[2];
+        float gradTarget[] = new float[2];
 
         // clear the whole drawing surface
         vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
@@ -251,19 +254,19 @@ class Tutorial {
         vg.vgTranslate(userToSurfaceTranslation[X_COORD], userToSurfaceTranslation[Y_COORD]);
         vg.vgScale(userToSurfaceScale, userToSurfaceScale);
         // draw the filled circle
-        vg.vgSetPaint(linGrad, VG_FILL_PATH);
+        vg.vgSetPaint(conGrad, VG_FILL_PATH);
         vg.vgDrawPath(filledCircle, VG_FILL_PATH);
 
-        // calculate the position of linear gradient control points, in surface space
-        gradientParamsGet(gradStart, gradEnd);
+        // calculate the position of conical gradient control points, in surface space
+        gradientParamsGet(gradCenter, gradTarget);
 
-        // draw linear gradient control points
+        // draw conical gradient control points
         vg.vgSetPaint(solidCol, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradStart[X_COORD], gradStart[Y_COORD]);
+        vg.vgTranslate(gradCenter[X_COORD], gradCenter[Y_COORD]);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradEnd[X_COORD], gradEnd[Y_COORD]);
+        vg.vgTranslate(gradTarget[X_COORD], gradTarget[Y_COORD]);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
     }
 
@@ -276,12 +279,12 @@ class Tutorial {
             if (linearInterpolation) {
                 linearInterpolation = false;
                 // upload new parameters to the OpenVG backend
-                vg.vgSetParameteri(linGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, VG_COLOR_RAMP_INTERPOLATION_SMOOTH_MZT);
+                vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, VG_COLOR_RAMP_INTERPOLATION_SMOOTH_MZT);
             }
             else {
                 linearInterpolation = true;
                 // upload new parameters to the OpenVG backend
-                vg.vgSetParameteri(linGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, VG_COLOR_RAMP_INTERPOLATION_LINEAR_MZT);
+                vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_INTERPOLATION_TYPE_MZT, VG_COLOR_RAMP_INTERPOLATION_LINEAR_MZT);
             }
         }
     }
@@ -300,7 +303,7 @@ class Tutorial {
         }
 
         // upload the new spread mode to the OpenVG backend
-        vg.vgSetParameteri(linGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
+        vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
     }
 
     /*****************************************************************
@@ -309,20 +312,20 @@ class Tutorial {
     void touchDown(float x,
                    float y) {
 
-        float distStart, distEnd;
-        float gradStart[] = new float[2];
-        float gradEnd[] = new float[2];
+        float distCenter, distTarget;
+        float gradCenter[] = new float[2];
+        float gradTarget[] = new float[2];
 
         // get current gradient parameters
-        gradientParamsGet(gradStart, gradEnd);
-        distStart = distance(mouseX, mouseY, gradStart[X_COORD], gradStart[Y_COORD]);
-        distEnd = distance(mouseX, mouseY, gradEnd[X_COORD], gradEnd[Y_COORD]);
+        gradientParamsGet(gradCenter, gradTarget);
+        distCenter = distance(x, y, gradCenter[X_COORD], gradCenter[Y_COORD]);
+        distTarget = distance(x, y, gradTarget[X_COORD], gradTarget[Y_COORD]);
         // check if we have picked a gradient control point
-        if (distStart < distEnd) {
-            pickedControlPoint = (distStart < controlPointsRadius) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
+        if (distCenter < distTarget) {
+            pickedControlPoint = (distCenter < controlPointsRadius) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (distEnd < controlPointsRadius) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
+            pickedControlPoint = (distTarget < controlPointsRadius) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
         oldTouchX = x;
@@ -343,20 +346,20 @@ class Tutorial {
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
                 // get current gradient parameters
-                float gradStart[] = new float[2];
-                float gradEnd[] = new float[2];
-                gradientParamsGet(gradStart, gradEnd);
+                float gradCenter[] = new float[2];
+                float gradTarget[] = new float[2];
+                gradientParamsGet(gradCenter, gradTarget);
                 // assign the new control point position
-                if (pickedControlPoint == CONTROL_POINT_START) {
-                    gradStart[X_COORD] = x;
-                    gradStart[Y_COORD] = y;
+                if (pickedControlPoint == CONTROL_POINT_CENTER) {
+                    gradCenter[X_COORD] = x;
+                    gradCenter[Y_COORD] = y;
                 }
                 else {
-                    gradEnd[X_COORD] = x;
-                    gradEnd[Y_COORD] = y;
+                    gradTarget[X_COORD] = x;
+                    gradTarget[Y_COORD] = y;
                 }
                 // update gradient parameters
-                gradientParamsSet(gradStart, gradEnd);
+                gradientParamsSet(gradCenter, gradTarget);
             }
         }
         // keep track of current touch position

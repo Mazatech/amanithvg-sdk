@@ -52,7 +52,7 @@ class Tutorial {
     int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
-    private static final int TOUCH_MODE_DOWN = 0;
+    private static final int TOUCH_MODE_DOWN = 1;
 
     private static final int X_COORD = 0;
     private static final int Y_COORD = 1;
