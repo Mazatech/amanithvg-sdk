@@ -41,7 +41,7 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
             paramSize = AmanithVGJNI.vgGetVectorSize(type);
         }
     
-        if (values == null) {
+        if ((paramSize > 0) && (values == null)) {
             throw new IllegalArgumentException("values == null");
         }
 
@@ -49,7 +49,7 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
             throw new IllegalArgumentException("offset < 0");
         }
 
-        if (values.length - offset < paramSize) {
+        if ((values != null) && (values.length - offset < paramSize)) {
             throw new IllegalArgumentException("not enough remaining entries (values)");
         }
     }
@@ -66,8 +66,8 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
             // for fixed length parameters, we must ensure a 'vgGetVectorSize(type)' number of entries inside 'values' array
             paramSize = AmanithVGJNI.vgGetVectorSize(type);
         }
-    
-        if (values == null) {
+
+        if ((paramSize > 0) && (values == null)) {
             throw new IllegalArgumentException("values == null");
         }
 
@@ -75,7 +75,7 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
             throw new IllegalArgumentException("offset < 0");
         }
 
-        if (values.length - offset < paramSize) {
+        if ((values != null) && (values.length - offset < paramSize)) {
             throw new IllegalArgumentException("not enough remaining entries (values)");
         }
     }

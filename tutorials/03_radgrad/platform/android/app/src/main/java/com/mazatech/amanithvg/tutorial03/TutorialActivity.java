@@ -30,6 +30,8 @@ import static com.mazatech.amanithvg.tutorial03.TutorialView.*;
 
 public class TutorialActivity extends AppCompatActivity {
 
+    // keep track of loaded AmanithVG native libraries
+    static boolean nativeLibsLoaded = false;
     // view
     private TutorialView view = null;
     // menu
@@ -163,7 +165,11 @@ public class TutorialActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        if (loadAmanithVG()) {
+        // load AmanithVG native libraries, if needed
+        if (!nativeLibsLoaded) {
+            nativeLibsLoaded = loadAmanithVG();
+        }
+        if (nativeLibsLoaded) {
             // create the view
             view = new TutorialView(this);
             setContentView(view);
