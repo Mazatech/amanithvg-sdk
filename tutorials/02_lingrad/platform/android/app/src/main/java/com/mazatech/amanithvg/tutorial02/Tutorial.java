@@ -363,4 +363,10 @@ class Tutorial {
         oldTouchX = x;
         oldTouchY = y;
     }
+
+    void touchDoubleTap(float x,
+                        float y) {
+
+        toggleSpreadMode();
+    }
 }

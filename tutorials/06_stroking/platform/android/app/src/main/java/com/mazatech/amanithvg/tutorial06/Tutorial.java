@@ -17,6 +17,8 @@ package com.mazatech.amanithvg.tutorial06;
 
 import android.graphics.PointF;
 
+import java.util.Random;
+
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
@@ -48,6 +50,8 @@ class Tutorial {
     private float[] userToSurfaceTranslation;
     private PointF[] controlPoints;
     private int pickedControlPoint;
+    // random numbers generator
+    Random rnd;
     // touch state
     float oldTouchX;
     float oldTouchY;
@@ -116,6 +120,7 @@ class Tutorial {
         }
         pickedControlPoint = CONTROL_POINT_NONE;
         controlPointsRadius = 14.0f;
+        rnd = new Random();
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -440,6 +445,14 @@ class Tutorial {
         dashAnimate = !dashAnimate;
     }
 
+    private void randomStroke() {
+
+        dashPattern = Math.abs(rnd.nextInt()) % 5;
+        joinStyle = (Math.abs(rnd.nextInt()) % 3) + VG_JOIN_MITER;
+        startCapStyle = (Math.abs(rnd.nextInt()) % 3) + VG_CAP_BUTT;
+        endCapStyle = (Math.abs(rnd.nextInt()) % 3) + VG_CAP_BUTT;
+    }
+
     /*****************************************************************
                             handle touch events
     *****************************************************************/
@@ -495,5 +508,11 @@ class Tutorial {
         // keep track of current touch position
         oldTouchX = x;
         oldTouchY = y;
+    }
+
+    void touchDoubleTap(float x,
+                        float y) {
+
+        randomStroke();
     }
 }

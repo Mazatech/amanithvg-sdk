@@ -547,4 +547,10 @@ class Tutorial {
             scale = 50.000f;
         }
     }
+
+    void touchDoubleTap(float x,
+                        float y) {
+
+        togglePaint();
+    }
 }

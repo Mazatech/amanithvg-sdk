@@ -23,6 +23,7 @@ import static android.opengl.GLES11Ext.GL_BGRA;
 import android.opengl.GLSurfaceView;
 import android.support.v7.app.AlertDialog;
 import android.view.MotionEvent;
+import android.view.GestureDetector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -39,7 +40,7 @@ import javax.microedition.khronos.opengles.GL11;
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VG101;
 
-public class TutorialView extends GLSurfaceView {
+public class TutorialView extends GLSurfaceView implements GestureDetector.OnDoubleTapListener, GestureDetector.OnGestureListener {
 
     public static final int TUTORIAL_CHANGE_JOIN_STYLE_CMD = 0;
     public static final int TUTORIAL_CHANGE_START_CAP_STYLE_CMD = 1;
@@ -66,6 +67,8 @@ public class TutorialView extends GLSurfaceView {
     Renderer renderer;
     // the tutorial instance
     Tutorial tutorial;
+    // gesture recognizer
+    private GestureDetector gestureDetector;
 
     TutorialView(Context context) {
 
@@ -93,6 +96,10 @@ public class TutorialView extends GLSurfaceView {
         renderer = new TutorialViewRenderer(this);
         setRenderer(renderer);
         setRenderMode(RENDERMODE_CONTINUOUSLY);
+
+        // setup gesture recognizer
+        gestureDetector = new GestureDetector(context, this);
+        gestureDetector.setOnDoubleTapListener(this);
 
         // request focus
         setFocusable(true);
@@ -343,6 +350,12 @@ public class TutorialView extends GLSurfaceView {
 
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         this.tutorial.touchMove(x, (float)getHeight() - y);
+    }
+
+    private void tutorialTouchDoubleTap(float x, float y) {
+
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        this.tutorial.touchDoubleTap(x, (float)getHeight() - y);
     }
 
     private void blitTextureUpdate(GL11 gl) {
@@ -629,21 +642,72 @@ public class TutorialView extends GLSurfaceView {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
-        switch (event.getAction() & MotionEvent.ACTION_MASK) {
+        if (!gestureDetector.onTouchEvent(event)) {
+            switch (event.getAction() & MotionEvent.ACTION_MASK) {
 
-            case MotionEvent.ACTION_DOWN:
-                tutorialTouchDown(event.getX(), event.getY());
-                break;
+                case MotionEvent.ACTION_DOWN:
+                    tutorialTouchDown(event.getX(), event.getY());
+                    break;
 
-            case MotionEvent.ACTION_UP:
-                tutorialTouchUp(event.getX(), event.getY());
-                break;
+                case MotionEvent.ACTION_UP:
+                    tutorialTouchUp(event.getX(), event.getY());
+                    break;
 
-            case MotionEvent.ACTION_MOVE:
-                tutorialTouchMove(event.getX(), event.getY());
-                break;
+                case MotionEvent.ACTION_MOVE:
+                    tutorialTouchMove(event.getX(), event.getY());
+                    break;
+            }
+
+            return true;
         }
+        return false;
+    }
 
-        return true;
+    @Override
+    public boolean onDoubleTapEvent(MotionEvent event) {
+
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            tutorialTouchDoubleTap(event.getX(), event.getY());
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onSingleTapConfirmed(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onDoubleTap(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onDown(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent event) {
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent event) {
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent event) {
+        return false;
     }
 }

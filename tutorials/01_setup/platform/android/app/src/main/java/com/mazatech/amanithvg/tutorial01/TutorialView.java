@@ -24,6 +24,7 @@ import static android.opengl.GLES11Ext.GL_BGRA;
 import android.opengl.GLSurfaceView;
 import android.support.v7.app.AlertDialog;
 import android.view.MotionEvent;
+import android.view.GestureDetector;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -40,7 +41,7 @@ import javax.microedition.khronos.opengles.GL11;
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VG101;
 
-public class TutorialView extends GLSurfaceView {
+public class TutorialView extends GLSurfaceView implements GestureDetector.OnDoubleTapListener, GestureDetector.OnGestureListener {
 
     public static final int TUTORIAL_TOGGLE_ANIMATION_CMD = 0;
     public static final int TUTORIAL_CHANGE_PAINT_CMD = 1;
@@ -80,6 +81,8 @@ public class TutorialView extends GLSurfaceView {
     Renderer renderer;
     // the tutorial instance
     Tutorial tutorial;
+    // gesture recognizer
+    private GestureDetector gestureDetector;
 
     TutorialView(Context context) {
 
@@ -107,6 +110,10 @@ public class TutorialView extends GLSurfaceView {
         renderer = new TutorialViewRenderer(this);
         setRenderer(renderer);
         setRenderMode(RENDERMODE_CONTINUOUSLY);
+
+        // setup gesture recognizer
+        gestureDetector = new GestureDetector(context, this);
+        gestureDetector.setOnDoubleTapListener(this);
 
         // request focus
         setFocusable(true);
@@ -373,6 +380,12 @@ public class TutorialView extends GLSurfaceView {
     private void tutorialTouchPinch(float deltaScl) {
 
         this.tutorial.touchPinch(deltaScl);
+    }
+
+    private void tutorialTouchDoubleTap(float x, float y) {
+
+        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        this.tutorial.touchDoubleTap(x, (float)getHeight() - y);
     }
 
     private void blitTextureUpdate(GL11 gl) {
@@ -667,44 +680,95 @@ public class TutorialView extends GLSurfaceView {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
-        switch (event.getAction() & MotionEvent.ACTION_MASK) {
+        if (!gestureDetector.onTouchEvent(event)) {
+            switch (event.getAction() & MotionEvent.ACTION_MASK) {
 
-            case MotionEvent.ACTION_DOWN:
-                touchStartPoint.set(event.getX(), event.getY());
-                touchMode = TOUCH_MODE_DRAG;
-                break;
+                case MotionEvent.ACTION_DOWN:
+                    touchStartPoint.set(event.getX(), event.getY());
+                    touchMode = TOUCH_MODE_DRAG;
+                    break;
 
-            case MotionEvent.ACTION_POINTER_DOWN:
-                touchOldDist = touchDistance(event);
-                touchMode = TOUCH_MODE_ZOOM;
-                break;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    touchOldDist = touchDistance(event);
+                    touchMode = TOUCH_MODE_ZOOM;
+                    break;
 
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_POINTER_UP:
-                touchMode = TOUCH_MODE_NONE;
-                break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_POINTER_UP:
+                    touchMode = TOUCH_MODE_NONE;
+                    break;
 
-            case MotionEvent.ACTION_MOVE:
-                if (touchMode == TOUCH_MODE_DRAG) {
-                    float x = event.getX();
-                    float y = event.getY();
-                    float touchDx = x - touchStartPoint.x;
-                    float touchDy = y - touchStartPoint.y;
-                    touchStartPoint.set(x, y);
-                    tutorialTouchDrag(touchDx, -touchDy);
-                }
-                else
-                if (touchMode == TOUCH_MODE_ZOOM) {
-                    float newDist = touchDistance(event);
-                    if (Math.abs(newDist - touchOldDist) > 5.0f) {
-                        tutorialTouchPinch((newDist > touchOldDist) ? 0.03f : -0.03f);
-                        touchOldDist = newDist;
+                case MotionEvent.ACTION_MOVE:
+                    if (touchMode == TOUCH_MODE_DRAG) {
+                        float x = event.getX();
+                        float y = event.getY();
+                        float touchDx = x - touchStartPoint.x;
+                        float touchDy = y - touchStartPoint.y;
+                        touchStartPoint.set(x, y);
+                        tutorialTouchDrag(touchDx, -touchDy);
                     }
-                }
-                break;
-        }
+                    else
+                    if (touchMode == TOUCH_MODE_ZOOM) {
+                        float newDist = touchDistance(event);
+                        if (Math.abs(newDist - touchOldDist) > 5.0f) {
+                            tutorialTouchPinch((newDist > touchOldDist) ? 0.03f : -0.03f);
+                            touchOldDist = newDist;
+                        }
+                    }
+                    break;
+            }
 
-        return true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onDoubleTapEvent(MotionEvent event) {
+
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            tutorialTouchDoubleTap(event.getX(), event.getY());
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onSingleTapConfirmed(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onDoubleTap(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onDown(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent event) {
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent event) {
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent event) {
+        return false;
     }
 
     @Override

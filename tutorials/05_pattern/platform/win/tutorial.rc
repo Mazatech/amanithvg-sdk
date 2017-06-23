@@ -1,0 +1,7 @@
+#define APSTUDIO_READONLY_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+#include "resource.h"
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST manifest.xml
+IDI_ICON1 ICON DISCARDABLE "tutorial.ico"
