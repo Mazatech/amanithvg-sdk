@@ -308,9 +308,8 @@ VGboolean done;
 
     strcpy(msg, "F2: About AmanithVG.\n");
     strcat(msg, "F1: Help.\n");
-    strcat(msg, "Mouse: Move gradient control points.\n");
-    strcat(msg, "I: Change color interpolation.\n");
-    strcat(msg, "S: Change spread mode.\n");
+    strcat(msg, "Mouse: Move pattern control points.\n");
+    strcat(msg, "T: Change tiling mode.\n");
     [self messageDialog :"Command keys" :msg];
 }
 
@@ -630,15 +629,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             case 27:
                 done = VG_TRUE;
                 break;
-            // I
-            case 'i':
-            case 'I':
-                toggleColorInterpolation();
-                break;
-            // S
-            case 's':
-            case 'S':
-                toggleSpreadMode();
+            // T
+            case 't':
+            case 'T':
+                toggleTilingMode();
                 break;
             default:
                 [super keyDown:theEvent];

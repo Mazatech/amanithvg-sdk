@@ -506,9 +506,8 @@ static void helpDialog(void) {
 
     strcpy(infoMessage, "F2: About AmanithVG.\n");
     strcat(infoMessage, "F1: Help.\n");
-    strcat(infoMessage, "Mouse: Move gradient control points.\n");
-    strcat(infoMessage, "I: Change color interpolation.\n");
-    strcat(infoMessage, "S: Change spread mode.\n");
+    strcat(infoMessage, "Mouse: Move pattern control points.\n");
+    strcat(infoMessage, "T: Change tiling mode.\n");
     displayAbout = VG_FALSE;
     displayHelp = VG_TRUE;
 }
@@ -532,14 +531,9 @@ static void processKeyPressure(KeySym key) {
         aboutDialog();
     }
     else
-    // I
-    if (key == XK_i) {
-        toggleColorInterpolation();
-    }
-    else
-    // S
-    if (key == XK_s) {
-        toggleSpreadMode();
+    // T
+    if (key == XK_t) {
+        toggleTilingMode();
     }
 }
 
