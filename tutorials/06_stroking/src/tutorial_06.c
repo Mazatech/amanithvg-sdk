@@ -123,7 +123,7 @@ static void extensionsCheck(void) {
 
     // get the list of supported OpenVG extensions
     const char* extensions = (const char*)vgGetString(VG_EXTENSIONS);
-    // check for the support of VG_MZT_color_ramp_interpolation extension
+    // check for the support of VG_MZT_separable_cap_style extension
     separableCapsSupported = extensionFind("VG_MZT_separable_cap_style", extensions);
 }
 
