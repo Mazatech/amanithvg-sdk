@@ -13,7 +13,7 @@
  ** For any information, please contact info@mazatech.com
  **
  ****************************************************************************/
-package com.mazatech.amanithvg.tutorial06;
+package com.mazatech.amanithvg.tutorial07;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -26,7 +26,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import static com.mazatech.amanithvg.tutorial06.TutorialView.*;
+import static com.mazatech.amanithvg.tutorial07.TutorialView.*;
 
 public class TutorialActivity extends AppCompatActivity {
 

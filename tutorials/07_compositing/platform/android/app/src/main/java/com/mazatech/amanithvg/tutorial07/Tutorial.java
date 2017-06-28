@@ -13,7 +13,7 @@
  ** For any information, please contact info@mazatech.com
  **
  ****************************************************************************/
-package com.mazatech.amanithvg.tutorial06;
+package com.mazatech.amanithvg.tutorial07;
 
 import android.graphics.PointF;
 
