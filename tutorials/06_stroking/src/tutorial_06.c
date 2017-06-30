@@ -69,31 +69,34 @@ static const VGfloat dashPatterns[4][4] = {
     {  5.0f, 45.0f, 35.0f, 25.0f }
 };
 
-VGPath strokedFlower = VG_INVALID_HANDLE;
-VGPath controlPoint = VG_INVALID_HANDLE;
-VGPath controlPolygon = VG_INVALID_HANDLE;
-VGPaint solidCol = VG_INVALID_HANDLE;
-VGfloat controlPointsRadius = 14.0f;
+// path and paint objects
+static VGPath strokedFlower = VG_INVALID_HANDLE;
+static VGPath controlPoint = VG_INVALID_HANDLE;
+static VGPath controlPolygon = VG_INVALID_HANDLE;
+static VGPaint solidCol = VG_INVALID_HANDLE;
 
 // current stroke configuration
-VGint dashPattern = 0;
-VGfloat dashPhase = 0.0f;
-VGboolean dashAnimate = VG_FALSE;
-VGJoinStyle joinStyle = VG_JOIN_MITER;
-VGCapStyle startCapStyle = VG_CAP_ROUND;
-VGCapStyle endCapStyle = VG_CAP_ROUND;
-VGboolean separableCapsSupported = VG_FALSE;
+static VGint dashPattern = 0;
+static VGfloat dashPhase = 0.0f;
+static VGboolean dashAnimate = VG_FALSE;
+static VGJoinStyle joinStyle = VG_JOIN_MITER;
+static VGCapStyle startCapStyle = VG_CAP_ROUND;
+static VGCapStyle endCapStyle = VG_CAP_ROUND;
+static VGboolean separableCapsSupported = VG_FALSE;
 
 // mouse state
-VGint oldMouseX = 0;
-VGint oldMouseY = 0;
-VGint mouseButton = MOUSE_BUTTON_NONE;
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // keep track of "path user to surface" transformation
-VGfloat userToSurfaceScale = 1.0f;
-VGfloat userToSurfaceTranslation[2] = { 0.0f };
-ControlPoint controlPoints[12] = { { 0.0f, 0.0f } };
-VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGfloat userToSurfaceScale = 1.0f;
+static VGfloat userToSurfaceTranslation[2] = { 0.0f };
+
+// control points
+static ControlPoint controlPoints[12] = { { 0.0f, 0.0f } };
+static VGfloat controlPointsRadius = 14.0f;
+static VGint pickedControlPoint = CONTROL_POINT_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,

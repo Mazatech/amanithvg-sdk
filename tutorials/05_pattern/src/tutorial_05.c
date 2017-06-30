@@ -29,24 +29,32 @@
 #define CONTROL_POINT_CENTER 1
 #define CONTROL_POINT_TARGET 2
 
-VGPath filledCircle, controlPoint, controlBounds;
-VGPaint solidCol, pattern;
-VGImage patternImage;
-VGuint patternImageSize = 64;
-VGfloat controlPointsRadius = 14.0f;
+// path and paint objects
+static VGPath filledCircle = VG_INVALID_HANDLE;
+static VGPath controlPoint = VG_INVALID_HANDLE;
+static VGPath controlBounds = VG_INVALID_HANDLE;
+static VGPaint solidCol = VG_INVALID_HANDLE;
+static VGPaint pattern = VG_INVALID_HANDLE;
+
+// pottern image
+static VGImage patternImage = VG_INVALID_HANDLE;
+static VGuint patternImageSize = 0;
+static VGImageFormat patternImageFormat = VG_sRGBA_8888_PRE;
+
 // pattern parameters
-VGTilingMode tilingMode = VG_TILE_FILL;
-VGfloat patternCenter[2] = { 0.0f };
-VGfloat patternTarget[2] = { 0.0f };
+static VGTilingMode tilingMode = VG_TILE_FILL;
+static VGfloat patternCenter[2] = { 0.0f };
+static VGfloat patternTarget[2] = { 0.0f };
 
 // mouse state
-VGint oldMouseX = 0;
-VGint oldMouseY = 0;
-VGint mouseButton = MOUSE_BUTTON_NONE;
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // keep track of "path user to surface" translation
-VGfloat userToSurfaceTranslation[2] = { 0.0f };
-VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGfloat userToSurfaceTranslation[2] = { 0.0f };
+static VGfloat controlPointsRadius = 14.0f;
+static VGint pickedControlPoint = CONTROL_POINT_NONE;
 
 // calculate the distance between two points
 static VGfloat distance(const VGfloat x0,
@@ -142,7 +150,7 @@ static void genPaints(void) {
     vgSetParameteri(solidCol, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
     vgSetParameterfv(solidCol, VG_PAINT_COLOR, 4, white);
     // create pattern image
-    patternImage = vgCreateImage(VG_sARGB_8888_PRE, patternImageSize, patternImageSize, VG_IMAGE_QUALITY_BETTER);
+    patternImage = vgCreateImage(patternImageFormat, patternImageSize, patternImageSize, VG_IMAGE_QUALITY_BETTER);
     pixels = (VGuint *)malloc(patternImageSize * patternImageSize * sizeof(VGuint));
     blocks = patternImageSize / 4;
     for (i = 0; i < patternImageSize; ++i) {
@@ -197,7 +205,8 @@ static void genPatternBounds(const VGfloat srfCenterPoint[],
 }
 
 void tutorialInit(const VGint surfaceWidth,
-                  const VGint surfaceHeight) {
+                  const VGint surfaceHeight
+                  const VGImageFormat preferredImageFormat) {
 
     // an opaque dark grey
     VGfloat clearColor[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -210,6 +219,7 @@ void tutorialInit(const VGint surfaceWidth,
         controlPointsRadius = 14.0f;
     }
     patternImageSize = (minDim >= 1024) ? 128 : 64;
+    patternImageFormat = preferredImageFormat;
 
     // reset pattern parameters
     patternParamsReset(surfaceWidth, surfaceHeight);

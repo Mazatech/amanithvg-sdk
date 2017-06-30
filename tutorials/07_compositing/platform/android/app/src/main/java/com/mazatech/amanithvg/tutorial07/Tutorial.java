@@ -104,19 +104,6 @@ class Tutorial {
         return (float)Math.hypot(dx, dy);
     }
 
-    /*
-    private void setDashPattern(int pattern) {
-
-        if (pattern == 0) {
-            vg.vgSetfv(VG_STROKE_DASH_PATTERN, 0, noDash);
-        }
-        else {
-            vg.vgSetfv(VG_STROKE_DASH_PATTERN, 4, dashPatterns[pattern - 1]);
-            vg.vgSetf(VG_STROKE_DASH_PHASE, dashPhase);
-        }
-    }
-    */
-
     private void genPaints() {
 
         float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };

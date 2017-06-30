@@ -119,6 +119,12 @@ static VGint openvgSurfaceHeightGet(void) {
     return vgPrivGetSurfaceHeightMZT(vgWindowSurface);
 }
 
+// get the format of OpenVG drawing surface
+static VGImageFormat openvgSurfaceFormatGet(void) {
+
+    return vgPrivGetSurfaceFormatMZT(vgWindowSurface);
+}
+
 // get the maximum surface dimension supported by the OpenVG backend
 static VGint openvgSurfaceMaxDimensionGet(void) {
 
@@ -637,8 +643,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // init application
-    tutorialInit(openvgSurfaceWidthGet(), openvgSurfaceHeightGet());
+    // init tutorial application (as a preferred image format, we pass the drawing surface one, in order to speedup "read pixels" operations and rendering)
+    tutorialInit(openvgSurfaceWidthGet(), openvgSurfaceHeightGet(), openvgSurfaceFormatGet());
 
     done = VG_FALSE;
     displayHelp = VG_FALSE;

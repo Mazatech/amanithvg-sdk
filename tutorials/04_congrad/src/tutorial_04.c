@@ -29,28 +29,32 @@
 #define CONTROL_POINT_CENTER 1
 #define CONTROL_POINT_TARGET 2
 
-VGPath filledCircle, controlPoint;
-VGPaint conGrad, solidCol;
-VGfloat controlPointsRadius = 14.0f;
+// path and paint objects
+static VGPath filledCircle = VG_INVALID_HANDLE;
+static VGPath controlPoint = VG_INVALID_HANDLE;
+static VGPaint conGrad = VG_INVALID_HANDLE;
+static VGPaint solidCol = VG_INVALID_HANDLE;
+
 // conical gradient parameters
-VGfloat conGradCenter[2] = { 0.0f };
-VGfloat conGradTarget[2] = { 0.0f };
-VGfloat conGradRepeats = 2.0f;
+static VGfloat conGradCenter[2] = { 0.0f };
+static VGfloat conGradTarget[2] = { 0.0f };
+static VGfloat conGradRepeats = 2.0f;
 
 // current paint states
-VGboolean linearInterpolation = VG_TRUE;
-VGboolean smoothRampSupported = VG_FALSE;
-VGColorRampSpreadMode spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
+static VGboolean linearInterpolation = VG_TRUE;
+static VGboolean smoothRampSupported = VG_FALSE;
+static VGColorRampSpreadMode spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
 
 // mouse state
-VGint oldMouseX = 0;
-VGint oldMouseY = 0;
-VGint mouseButton = MOUSE_BUTTON_NONE;
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // keep track of "path user to surface" transformation
-VGfloat userToSurfaceScale = 1.0f;
-VGfloat userToSurfaceTranslation[2] = { 0.0f };
-VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGfloat userToSurfaceScale = 1.0f;
+static VGfloat userToSurfaceTranslation[2] = { 0.0f };
+static VGfloat controlPointsRadius = 14.0f;
+static VGint pickedControlPoint = CONTROL_POINT_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,

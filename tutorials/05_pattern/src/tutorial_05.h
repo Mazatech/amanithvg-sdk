@@ -22,7 +22,8 @@
 #include <VG/vgext.h>
 
 void tutorialInit(const VGint surfaceWidth,
-                  const VGint surfaceHeight);
+                  const VGint surfaceHeight,
+                  const VGImageFormat preferredImageFormat);
 void tutorialDestroy(void);
 void tutorialResize(const VGint surfaceWidth,
                     const VGint surfaceHeight);

@@ -41,6 +41,7 @@ class Tutorial {
     private float[] patternTarget;
     private int tilingMode;
     private int patternImageSize;
+    private int patternImageFormat;
     // keep track of "path user to surface" translation
     private float[] userToSurfaceTranslation;
     private int pickedControlPoint;
@@ -173,7 +174,7 @@ class Tutorial {
         vg.vgSetParameteri(solidCol, VG_PAINT_TYPE, VG_PAINT_TYPE_COLOR);
         vg.vgSetParameterfv(solidCol, VG_PAINT_COLOR, 4, white);
         // create pattern image
-        patternImage = vg.vgCreateImage(VG_sARGB_8888_PRE, patternImageSize, patternImageSize, VG_IMAGE_QUALITY_BETTER);
+        patternImage = vg.vgCreateImage(patternImageFormat, patternImageSize, patternImageSize, VG_IMAGE_QUALITY_BETTER);
         int pixels[] = new int[patternImageSize * patternImageSize];
         int blocks = patternImageSize / 4;
         for (int i = 0; i < patternImageSize; ++i) {
@@ -219,7 +220,8 @@ class Tutorial {
     }
 
     void init(int surfaceWidth,
-              int surfaceHeight) {
+              int surfaceHeight,
+              int preferredImageFormat) {
 
         // an opaque dark grey
         float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -231,6 +233,7 @@ class Tutorial {
             controlPointsRadius = 14.0f;
         }
         patternImageSize = (Math.min(surfaceWidth, surfaceHeight) >= 1024) ? 128 : 64;
+        patternImageFormat = preferredImageFormat;
 
         // reset pattern parameters
         patternParamsReset(surfaceWidth, surfaceHeight);

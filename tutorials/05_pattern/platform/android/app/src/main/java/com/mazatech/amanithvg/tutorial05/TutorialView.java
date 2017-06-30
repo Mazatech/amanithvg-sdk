@@ -242,6 +242,12 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         return vg.vgPrivGetSurfaceHeightMZT(vgSurface);
     }
 
+    // get the format of OpenVG drawing surface
+    private int openvgSurfaceFormatGet() {
+
+        return vg.vgPrivGetSurfaceFormatMZT(vgSurface);
+    }
+
     // get the maximum surface dimension supported by the OpenVG backend
     private int openvgSurfaceMaxDimensionGet() {
 
@@ -260,7 +266,9 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     private void tutorialInit() {
 
         tutorial = new Tutorial(vg);
-        tutorial.init(openvgSurfaceWidthGet(), openvgSurfaceHeightGet());
+        // init tutorial application (as a preferred image format, we pass the drawing surface
+        // one, in order to speedup "read pixels" operations and rendering)
+        tutorial.init(openvgSurfaceWidthGet(), openvgSurfaceHeightGet(), openvgSurfaceFormatGet());
     }
 
     private void tutorialDestroy() {

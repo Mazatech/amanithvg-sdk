@@ -68,6 +68,7 @@ VGboolean done;
 - (void) openvgDestroy;
 - (VGint) openvgSurfaceWidthGet;
 - (VGint) openvgSurfaceHeightGet;
+- (VGImageFormat) openvgSurfaceFormatGet;
 - (VGint) openvgSurfaceMaxDimensionGet;
 #ifdef AM_SRE
     // setup the texture that will be used to blit AmanithVG SRE surface
@@ -163,6 +164,13 @@ VGboolean done;
 - (VGint) openvgSurfaceHeightGet {
 
     return vgPrivGetSurfaceHeightMZT(vgWindowSurface);
+}
+
+
+// get the format of OpenVG drawing surface
+- (VGImageFormat) openvgSurfaceFormatGet {
+
+    return vgPrivGetSurfaceFormatMZT(vgWindowSurface);
 }
 
 // get the maximum surface dimension supported by the OpenVG backend
@@ -444,8 +452,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         exit(EXIT_FAILURE);
     }
 
-    // init tutorial application (OpenVG related code)
-    tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+    // init tutorial application (as a preferred image format, we pass the drawing surface one, in order to speedup "read pixels" operations and rendering)
+    tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet], [self openvgSurfaceFormatGet]);
 
     // create a display link capable of being used with all active displays
     CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);

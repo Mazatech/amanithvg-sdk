@@ -29,30 +29,33 @@
 #define CONTROL_POINT_SRC_IMAGE 1
 #define CONTROL_POINT_DST_IMAGE 2
 
-VGPath flower, controlPoint, imageBounds;
-VGPaint solidCol, paintSrc, paintDst;
-VGImage srcImage = VG_INVALID_HANDLE;
-VGImage dstImage = VG_INVALID_HANDLE;
-VGImageFormat imagesFormat;
-//VGPaint solidCol;
-VGfloat controlPointsRadius = 14.0f;
+// path and paint objects
+static VGPath flower = VG_INVALID_HANDLE;
+static VGPath controlPoint = VG_INVALID_HANDLE;
+static VGPath imageBounds = VG_INVALID_HANDLE;
+static VGPaint solidCol = VG_INVALID_HANDLE;
+static VGPaint paintSrc = VG_INVALID_HANDLE;
+static VGPaint paintDst = VG_INVALID_HANDLE;
+
+// SRC and DST images
+static VGImage srcImage = VG_INVALID_HANDLE;
+static VGImage dstImage = VG_INVALID_HANDLE;
+static VGImageFormat imagesFormat = VG_sRGBA_8888_PRE;
+static VGint imagesSize = 0;
+static VGfloat srcImagePos[2] = { 0.0f };
+static VGfloat dstImagePos[2] = { 0.0f };
 
 // current paint states
-VGfloat srcImagePos[2] = { 0.0f };
-VGfloat dstImagePos[2] = { 0.0f };
-VGint imagesSize = 0;
-VGboolean extBlendModesSupported = VG_FALSE;
-VGBlendMode blendMode = VG_BLEND_SRC_OVER;
+static VGboolean extBlendModesSupported = VG_FALSE;
+static VGBlendMode blendMode = VG_BLEND_SRC_OVER;
 
 // mouse state
-VGint oldMouseX = 0;
-VGint oldMouseY = 0;
-VGint mouseButton = MOUSE_BUTTON_NONE;
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
-// keep track of "path user to surface" transformation
-//VGfloat userToSurfaceScale = 1.0f;
-//VGfloat userToSurfaceTranslation[2] = { 0.0f };
-VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGfloat controlPointsRadius = 14.0f;
+static VGint pickedControlPoint = CONTROL_POINT_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,
