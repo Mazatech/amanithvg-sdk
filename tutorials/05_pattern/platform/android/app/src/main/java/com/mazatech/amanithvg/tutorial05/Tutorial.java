@@ -31,19 +31,20 @@ class Tutorial {
     private VGPath filledCircle;
     private VGPath controlPoint;
     private VGPath controlBounds;
-    private float controlPointsRadius;
     // paint objects
     private VGPaint solidCol;
     private VGPaint pattern;
+    // pottern image
     private VGImage patternImage;
-    // pattern parameters
-    private float[] patternCenter;
-    private float[] patternTarget;
-    private int tilingMode;
     private int patternImageSize;
     private int patternImageFormat;
+    // pattern parameters
+    private int tilingMode;
+    private float[] patternCenter;
+    private float[] patternTarget;
     // keep track of "path user to surface" translation
     private float[] userToSurfaceTranslation;
+    private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
     float oldTouchX;
@@ -78,13 +79,20 @@ class Tutorial {
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
+        filledCircle = null;
+        controlPoint = null;
+        controlBounds = null;
+        solidCol = null;
+        pattern = null;
+        patternImage = null;
+        patternImageSize = 0;
+        patternImageFormat = VG_sRGBA_8888_PRE;
+        tilingMode = VG_TILE_FILL;
         patternCenter = new float[] { 0.0f, 0.0f };
         patternTarget = new float[] { 0.0f, 0.0f };
-        tilingMode = VG_TILE_FILL;
-        patternImageSize = 64;
         userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
-        pickedControlPoint = CONTROL_POINT_NONE;
         controlPointsRadius = 14.0f;
+        pickedControlPoint = CONTROL_POINT_NONE;
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -352,10 +360,10 @@ class Tutorial {
         distTarget = distance(x, y, target[X_COORD], target[Y_COORD]);
         // check if we have picked a control point
         if (distCenter < distTarget) {
-            pickedControlPoint = (distCenter < controlPointsRadius) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
+            pickedControlPoint = (distCenter < controlPointsRadius * 1.1f) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (distTarget < controlPointsRadius) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
+            pickedControlPoint = (distTarget < controlPointsRadius * 1.1f) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
         oldTouchX = x;

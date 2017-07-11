@@ -44,6 +44,7 @@ class Tutorial {
     private PointF[] imageControlPoints;
     private float controlPointsRadius;
     private int pickedControlPoint;
+    boolean mustUpdatePaths;
     // touch state
     float oldTouchX;
     float oldTouchY;
@@ -59,14 +60,27 @@ class Tutorial {
 
     Tutorial(AmanithVG vgInstance) {
 
+        int i;
+
         vg = vgInstance;
+        controlPoint = null;
+        imageBounds = null;
         girlPaths = new VGPath[GirlData.girlPathsData.length];
+        for (i = 0; i < GirlData.girlPathsData.length; ++i) {
+            girlPaths[i] = null;
+        }
+        solidCol = null;
+        girlImage = null;
+        imageWidth = 0;
+        imageHeight = 0;
+        imageFormat = VG_sRGBA_8888_PRE;
         imageControlPoints = new PointF[4];
-        for (int i = 0; i < 4; ++i) {
+        for (i = 0; i < 4; ++i) {
             imageControlPoints[i] = new PointF(0.0f, 0.0f);
         }
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
+        mustUpdatePaths = false;
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -111,13 +125,6 @@ class Tutorial {
 
     private void genImageBounds() {
 
-        byte[] boundsCmd = new byte[] {
-            VG_MOVE_TO_ABS,
-            VG_LINE_TO_ABS,
-            VG_LINE_TO_ABS,
-            VG_LINE_TO_ABS,
-            VG_CLOSE_PATH
-        };
         float[] boundsCoords = new float[] {
             imageControlPoints[0].x, imageControlPoints[0].y,
             imageControlPoints[1].x, imageControlPoints[1].y,
@@ -126,7 +133,7 @@ class Tutorial {
         };
 
         vg.vgClearPath(imageBounds, VG_PATH_CAPABILITY_ALL);
-        vg.vgAppendPathData(imageBounds, 5, boundsCmd, boundsCoords);
+        vg.vguPolygon(imageBounds, boundsCoords, 4, true);
     }
 
     private void genImage(int surfaceWidth,
@@ -240,6 +247,11 @@ class Tutorial {
         float warpMatrix[] = new float[9];
         float[] clearColor = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
 
+        if (mustUpdatePaths) {
+            mustUpdatePaths = false;
+            genImageBounds();
+        }
+
         // clear the whole drawing surface
         vg.vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
         vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
@@ -300,7 +312,7 @@ class Tutorial {
             }
         }
         // check if we have picked a control point
-        pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius)) ? closestPoint : CONTROL_POINT_NONE;
+        pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
         // keep track of current touch position
         oldTouchX = x;
         oldTouchY = y;
@@ -322,7 +334,9 @@ class Tutorial {
                 // set the new position for the selected control point
                 imageControlPoints[pickedControlPoint].x = x;
                 imageControlPoints[pickedControlPoint].y = y;
-                genImageBounds();
+                // we update paths within the 'draw' method, in order to
+                // stick to the rendering thread
+                mustUpdatePaths = true;
             }
         }
         // keep track of current touch position

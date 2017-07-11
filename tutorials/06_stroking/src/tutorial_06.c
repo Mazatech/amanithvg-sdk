@@ -43,24 +43,6 @@ static const VGubyte flowerCmds[6] = {
     VG_CLOSE_PATH
 };
 
-// OpenVG path commands used to build the 'controlPolygon' path
-static const VGubyte polygonCmds[14] = {
-    VG_MOVE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_LINE_TO_ABS,
-    VG_CLOSE_PATH
-}
-
 // dash patterns
 static const VGfloat dashPatterns[4][4] = {
     { 30.0f, 30.0f,  5.0f, 45.0f },
@@ -84,11 +66,6 @@ static VGCapStyle startCapStyle = VG_CAP_ROUND;
 static VGCapStyle endCapStyle = VG_CAP_ROUND;
 static VGboolean separableCapsSupported = VG_FALSE;
 
-// mouse state
-static VGint oldMouseX = 0;
-static VGint oldMouseY = 0;
-static VGint mouseButton = MOUSE_BUTTON_NONE;
-
 // keep track of "path user to surface" transformation
 static VGfloat userToSurfaceScale = 1.0f;
 static VGfloat userToSurfaceTranslation[2] = { 0.0f };
@@ -97,6 +74,11 @@ static VGfloat userToSurfaceTranslation[2] = { 0.0f };
 static ControlPoint controlPoints[12] = { { 0.0f, 0.0f } };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedControlPoint = CONTROL_POINT_NONE;
+
+// mouse state
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,
@@ -242,7 +224,7 @@ static void updatePaths(void) {
         pathCoords[i * 2] = controlPoints[i].x;
         pathCoords[(i * 2) + 1] = controlPoints[i].y;
     }
-    vgAppendPathData(controlPolygon, 14, polygonCmds, pathCoords);
+    vguPolygon(controlPolygon, pathCoords, 12, VG_TRUE);
 }
 
 void tutorialInit(const VGint surfaceWidth,
@@ -472,13 +454,14 @@ void mouseLeftButtonDown(const VGint x,
         controlPointGet(userSpacePoint, srfSpacePoint);
         // get its distance from mouse position
         dist = distance(mouseX, mouseY, srfSpacePoint[X_COORD], srfSpacePoint[Y_COORD]);
+        // keep track of minimum distance
         if (dist < minDist) {
             minDist = dist;
             closestPoint = i;
         }
     }
     // check if we have picked a control point
-    pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius)) ? closestPoint : CONTROL_POINT_NONE;
+    pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
 
     // keep track of current mouse position
     oldMouseX = x;

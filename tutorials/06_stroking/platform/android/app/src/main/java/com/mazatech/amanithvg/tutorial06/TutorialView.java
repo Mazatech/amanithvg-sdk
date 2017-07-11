@@ -15,15 +15,11 @@
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial06;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.PixelFormat;
 
 import static android.opengl.EGL14.EGL_CONTEXT_CLIENT_VERSION;
 import static android.opengl.GLES11Ext.GL_BGRA;
-import static javax.microedition.khronos.openvg.VG101.*;
-import static javax.microedition.khronos.openvg.VG11Ext.*;
-
 import android.opengl.GLSurfaceView;
 import android.support.v7.app.AlertDialog;
 import android.view.MotionEvent;
@@ -42,14 +38,17 @@ import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.opengles.GL10;
 import javax.microedition.khronos.opengles.GL11;
 import javax.microedition.khronos.openvg.AmanithVG;
+import javax.microedition.khronos.openvg.VG101;
 
 public class TutorialView extends GLSurfaceView implements GestureDetector.OnDoubleTapListener, GestureDetector.OnGestureListener {
 
-    public static final int TUTORIAL_CHANGE_BLEND_MODE_CMD = 0;
-    public static final int TUTORIAL_ABOUT_CMD = 1;
+    public static final int TUTORIAL_CHANGE_JOIN_STYLE_CMD = 0;
+    public static final int TUTORIAL_CHANGE_START_CAP_STYLE_CMD = 1;
+    public static final int TUTORIAL_CHANGE_END_CAP_STYLE_CMD = 2;
+    public static final int TUTORIAL_CHANGE_DASH_PATTERN_CMD = 3;
+    public static final int TUTORIAL_TOGGLE_DASH_ANIMATION_CMD = 4;
+    public static final int TUTORIAL_ABOUT_CMD = 5;
 
-    // the host activity
-    Context activity;
     // AmanithVG variables
     private AmanithVG vg;
     private long vgContext;
@@ -75,7 +74,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
         super(context);
 
-        activity = context;
         // check if we have to use AmanithVG SRE (or GLE)
         sreBackend = getResources().getBoolean(R.bool.sreBackend);
 
@@ -120,97 +118,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
             v <<= 1;
         }
         return v;
-    }
-
-    private String blendModeStr(int blendMode) {
-
-        String result;
-
-        switch (blendMode) {
-            case VG_BLEND_SRC:
-                result = "SRC";
-                break;
-            case VG_BLEND_SRC_OVER:
-                result = "SRC OVER";
-                break;
-            case VG_BLEND_DST_OVER:
-                result = "DST OVER";
-                break;
-            case VG_BLEND_SRC_IN:
-                result = "SRC IN";
-                break;
-            case VG_BLEND_DST_IN:
-                result = "DST IN";
-                break;
-            case VG_BLEND_MULTIPLY:
-                result = "MULTIPLY";
-                break;
-            case VG_BLEND_SCREEN:
-                result = "SCREEN";
-                break;
-            case VG_BLEND_DARKEN:
-                result = "DARKEN";
-                break;
-            case VG_BLEND_LIGHTEN:
-                result = "LIGHTEN";
-                break;
-            case VG_BLEND_ADDITIVE:
-                result = "ADDITIVE";
-                break;
-            // VG_MZT_advanced_blend_modes (extended blend modes)
-            case VG_BLEND_CLEAR_MZT:
-                result = "CLEAR";
-                break;
-            case VG_BLEND_DST_MZT:
-                result = "DST";
-                break;
-            case VG_BLEND_SRC_OUT_MZT:
-                result = "SRC OUT";
-                break;
-            case VG_BLEND_DST_OUT_MZT:
-                result = "DST OUT";
-                break;
-            case VG_BLEND_SRC_ATOP_MZT:
-                result = "SRC ATOP";
-                break;
-            case VG_BLEND_DST_ATOP_MZT:
-                result = "DST ATOP";
-                break;
-            case VG_BLEND_XOR_MZT:
-                result = "XOR";
-                break;
-            case VG_BLEND_OVERLAY_MZT:
-                result = "OVERLAY";
-                break;
-            case VG_BLEND_COLOR_DODGE_MZT:
-                result = "COLOR DODGE";
-                break;
-            case VG_BLEND_COLOR_BURN_MZT:
-                result = "COLOR BURN";
-                break;
-            case VG_BLEND_HARD_LIGHT_MZT:
-                result = "HARD LIGHT";
-                break;
-            case VG_BLEND_SOFT_LIGHT_MZT:
-                result = "SOFT LIGHT";
-                break;
-            case VG_BLEND_DIFFERENCE_MZT:
-                result = "DIFFERENCE";
-                break;
-            case VG_BLEND_EXCLUSION_MZT:
-                result = "EXCLUSION";
-                break;
-            default:
-                result = "";
-                break;
-        }
-
-        return result;
-    }
-
-    private void activityTitleUpdate() {
-        String appName = getResources().getString(R.string.app_name);
-        ((Activity)activity).setTitle(appName + " (" + blendModeStr(tutorial.getBlendMode()) + ")");
     }
 
     /*****************************************************************
@@ -339,12 +246,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         return vg.vgPrivGetSurfaceHeightMZT(vgSurface);
     }
 
-    // get the format of OpenVG drawing surface
-    private int openvgSurfaceFormatGet() {
-
-        return vg.vgPrivGetSurfaceFormatMZT(vgSurface);
-    }
-
     // get the maximum surface dimension supported by the OpenVG backend
     private int openvgSurfaceMaxDimensionGet() {
 
@@ -363,15 +264,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     private void tutorialInit() {
 
         tutorial = new Tutorial(vg);
-        // init tutorial application (as a preferred image format, we pass the drawing surface
-        // one, in order to speedup "read pixels" operations and rendering)
-        tutorial.init(openvgSurfaceWidthGet(), openvgSurfaceHeightGet(), openvgSurfaceFormatGet());
-        // we are here from the GL renderer thread
-        ((Activity)activity).runOnUiThread(new Runnable() {
-            public void run() {
-                activityTitleUpdate();
-            }
-        });
+        tutorial.init(openvgSurfaceWidthGet(), openvgSurfaceHeightGet());
     }
 
     private void tutorialDestroy() {
@@ -409,9 +302,24 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
         switch (option) {
 
-            case TUTORIAL_CHANGE_BLEND_MODE_CMD:
-                tutorial.toggleBlendMode();
-                activityTitleUpdate();
+            case TUTORIAL_CHANGE_JOIN_STYLE_CMD:
+                tutorial.toggleJoinStyle();
+                break;
+
+            case TUTORIAL_CHANGE_START_CAP_STYLE_CMD:
+                tutorial.toggleStartCapStyle();
+                break;
+
+            case TUTORIAL_CHANGE_END_CAP_STYLE_CMD:
+                tutorial.toggleEndCapStyle();
+                break;
+
+            case TUTORIAL_CHANGE_DASH_PATTERN_CMD:
+                tutorial.toggleDash();
+                break;
+
+            case TUTORIAL_TOGGLE_DASH_ANIMATION_CMD:
+                tutorial.toggleDashAnimation();
                 break;
 
             case TUTORIAL_ABOUT_CMD:
@@ -448,7 +356,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         this.tutorial.touchDoubleTap(x, (float)getHeight() - y);
-        activityTitleUpdate();
     }
 
     private void blitTextureUpdate(GL11 gl) {
@@ -712,13 +619,13 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         msg += "Copyright 2004-" + year + " by Mazatech Srl. All Rights Reserved.\n\n";
         msg += "OpenVG driver information:\n\n";
         // vendor
-        msg += "Vendor: " + vg.vgGetString(VG_VENDOR) + "\n";
+        msg += "Vendor: " + vg.vgGetString(VG101.VG_VENDOR) + "\n";
         // renderer
-        msg += "Renderer: " + vg.vgGetString(VG_RENDERER) + "\n";
+        msg += "Renderer: " + vg.vgGetString(VG101.VG_RENDERER) + "\n";
         // version
-        msg += "Version: " + vg.vgGetString(VG_VERSION) + "\n";
+        msg += "Version: " + vg.vgGetString(VG101.VG_VERSION) + "\n";
         // extensions
-        msg += "Extensions: " + vg.vgGetString(VG_EXTENSIONS);
+        msg += "Extensions: " + vg.vgGetString(VG101.VG_EXTENSIONS);
         messageDialog("About AmanithVG", msg);
     }
 

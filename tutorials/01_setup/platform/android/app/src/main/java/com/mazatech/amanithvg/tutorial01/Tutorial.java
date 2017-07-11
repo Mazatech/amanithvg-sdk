@@ -27,46 +27,69 @@ class Tutorial {
 
     // AmanithVG instance, passed through the constructor
     private AmanithVG vg;
-    // clover-like path
+    // the clover-like path
     private VGPath path;
     // paint objects
     private VGPaint color;
     private VGPaint linGrad;
     private VGPaint radGrad;
     private VGPaint conGrad;
-    private float conGradRepeats;
-    private boolean conGradSupported;
     private VGPaint pattern;
     private VGImage patternImage;
-    // current paint type
-    private int paintIndex;
+    // conical gradients extension (VG_MZT_conical_gradient)
+    private int conGradRepeats;
+    private boolean conGradSupported;
+    // current paint states
     private boolean linearInterpolation;
     private boolean smoothRampSupported;
-    // current gradients spread mode
+    private int paintIndex;
     private int spreadMode;
-    // current pattern tiling mode
     private int tilingMode;
+    // animaton, scissoring and masking flags
     private boolean animate;
     private boolean scissoring;
     private int scissorRectsConf;
     private boolean masking;
-    // clover transformation
+    // current transformation
     private float rotation;
     private float scale;
     private float[] translation;
 
-    private static final int PAINT_COLOR = 0;
+    private static final int PAINT_COLOR   = 0;
     private static final int PAINT_LINGRAD = 1;
     private static final int PAINT_RADGRAD = 2;
     private static final int PAINT_CONGRAD = 3;
     private static final int PAINT_PATTERN = 4;
-    private static final int PATTERN_WIDTH = 64;
+
+    private static final int PATTERN_WIDTH  = 64;
     private static final int PATTERN_HEIGHT = 64;
 
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
-        translation = new float[2];
+        path = null;
+        color = null;
+        linGrad = null;
+        radGrad = null;
+        conGrad = null;
+        pattern = null;
+        patternImage = null;
+        conGradRepeats = 1;
+        conGradSupported = false;
+        linearInterpolation = true;
+        smoothRampSupported = false;
+        paintIndex = PAINT_COLOR;
+        spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
+        tilingMode = VG_TILE_PAD;
+        // start with no animaton, disabled scissoring and disabled masking
+        animate = false;
+        scissoring = false;
+        scissorRectsConf = 1;
+        masking = false;
+        // start with no rotation and put the path at the center of screen
+        rotation = 0.0f;
+        scale = 1.0f;
+        translation = new float[] { 0.0f, 0.0f };
     }
 
     private void extensionsCheck() {
@@ -139,7 +162,6 @@ class Tutorial {
             colKeys[20] = 1.00f; colKeys[21] = 0.4f; colKeys[22] = 0.0f; colKeys[23] = 0.6f; colKeys[24] = 1.0f;
             conGradParams[0] = 256.0f; conGradParams[1] = 256.0f;
             conGradParams[2] = 200.0f; conGradParams[3] = 200.0f;
-            conGradRepeats = 1;
             conGradParams[4] = (float)conGradRepeats;
             vg.vgSetParameteri(conGrad, VG_PAINT_TYPE, VG_PAINT_TYPE_CONICAL_GRADIENT_MZT);
             vg.vgSetParameterfv(conGrad, VG_PAINT_COLOR_RAMP_STOPS, 25, colKeys);
@@ -232,7 +254,7 @@ class Tutorial {
 
         // check for OpenVG extensions
         extensionsCheck();
-        // generate the flower path
+        // generate the clover path
         genPaths();
         // generate all the paints
         genPaints();
@@ -247,22 +269,9 @@ class Tutorial {
         vg.vgSetf(VG_STROKE_JOIN_STYLE, VG_JOIN_BEVEL);
         vg.vgSeti(VG_RENDERING_QUALITY, VG_RENDERING_QUALITY_BETTER);
         vg.vgSeti(VG_BLEND_MODE, VG_BLEND_SRC);
-
-        paintIndex = PAINT_COLOR;
-        linearInterpolation = true;
-        spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
-        tilingMode = VG_TILE_PAD;
-        // start with no rotation and put the path at the center of screen
-        animate = false;
-        rotation = 0.0f;
-        scale = 1.0f;
-        translation[0] = 0.0f;
-        translation[1] = 0.0f;
-        // disable scissoring and masking
-        scissoring = false;
-        scissorRectsConf = 1;
+        // upload scissor rectangles to the OpenVG backend
         toggleScissorRects(surfaceWidth, surfaceHeight);
-        masking = false;
+
     }
 
     void destroy() {
@@ -370,7 +379,7 @@ class Tutorial {
         vg.vgSeti(VG_SCISSORING, scissoring);
         // set alpha mask
         vg.vgSeti(VG_MASKING, masking);
-        // draw the flower path
+        // draw the clover path
         vg.vgDrawPath(path, VG_FILL_PATH);
     }
 
@@ -466,7 +475,7 @@ class Tutorial {
     void addGradientRepeat() {
 
         if (conGradSupported) {
-            if (conGradRepeats < 4.0f) {
+            if (conGradRepeats < 4) {
                 float conGradParams[] = new float[5];
                 // increase repeats
                 conGradRepeats++;

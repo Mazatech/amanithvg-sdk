@@ -18,47 +18,56 @@
 #include <string.h>
 #include <math.h>
 
-#define PAINT_COLOR 0
+#define PAINT_COLOR   0
 #define PAINT_LINGRAD 1
 #define PAINT_RADGRAD 2
 #define PAINT_CONGRAD 3
 #define PAINT_PATTERN 4
 
-#define PATTERN_WIDTH 64
+#define PATTERN_WIDTH  64
 #define PATTERN_HEIGHT 64
 
-#define MOUSE_BUTTON_NONE 0
-#define MOUSE_BUTTON_LEFT 1
+#define MOUSE_BUTTON_NONE  0
+#define MOUSE_BUTTON_LEFT  1
 #define MOUSE_BUTTON_RIGHT 2
 
-// the flower-like path
-VGPath path;
-// paints
-VGPaint color;
-VGPaint linGrad;
-VGPaint radGrad;
-VGPaint conGrad;
-VGint conGradRepeats;
-VGboolean conGradSupported;
-VGPaint pattern;
-VGImage patternImage;
+// the clover-like path
+static VGPath path = VG_INVALID_HANDLE;
+
+// paints objects
+static VGPaint color = VG_INVALID_HANDLE;
+static VGPaint linGrad = VG_INVALID_HANDLE;
+static VGPaint radGrad = VG_INVALID_HANDLE;
+static VGPaint conGrad = VG_INVALID_HANDLE;
+static VGPaint pattern = VG_INVALID_HANDLE;
+static VGImage patternImage = VG_INVALID_HANDLE;
+
+// conical gradients extension (VG_MZT_conical_gradient)
+static VGint conGradRepeats = 1;
+static VGboolean conGradSupported = VG_FALSE;
+
 // current paint states
-VGuint paintIndex;
-VGboolean linearInterpolation;
-VGboolean smoothRampSupported;
-VGColorRampSpreadMode spreadMode;
-VGTilingMode tilingMode;
-VGboolean animate;
-VGboolean scissoring;
-VGuint scissorRectsConf;
-VGboolean masking;
-// current transformation
-VGfloat rotation;
-VGfloat scale;
-VGfloat translation[2];
+static VGboolean linearInterpolation = VG_TRUE;
+static VGboolean smoothRampSupported = VG_FALSE;
+static VGuint paintIndex = PAINT_COLOR;
+static VGColorRampSpreadMode spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
+static VGTilingMode tilingMode = VG_TILE_PAD;
+
+// start with no animaton, disabled scissoring and disabled masking
+static VGboolean animate = VG_FALSE;
+static VGboolean scissoring = VG_FALSE;
+static VGuint scissorRectsConf = 1;
+static VGboolean masking = VG_FALSE;
+
+// current transformation (start with no rotation and put the path at the center of screen)
+static VGfloat rotation = 0.0f;
+static VGfloat scale = 1.0f;
+static VGfloat translation[2] = { 0.0f };
+
 // mouse state
-VGint mouseButton;
-VGint oldMouseX, oldMouseY;
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,
@@ -151,7 +160,6 @@ static void genPaints(void) {
         colKeys[20] = 1.00f; colKeys[21] = 0.4f; colKeys[22] = 0.0f; colKeys[23] = 0.6f; colKeys[24] = 1.0f;
         conGradParams[0] = 256.0f; conGradParams[1] = 256.0f;
         conGradParams[2] = 200.0f; conGradParams[3] = 200.0f;
-        conGradRepeats = 1;
         conGradParams[4] = (VGfloat)conGradRepeats;
         vgSetParameteri(conGrad, VG_PAINT_TYPE, VG_PAINT_TYPE_CONICAL_GRADIENT_MZT);
         vgSetParameterfv(conGrad, VG_PAINT_COLOR_RAMP_STOPS, 25, colKeys);
@@ -250,7 +258,7 @@ void tutorialInit(const VGint surfaceWidth,
 
     // check for OpenVG extensions
     extensionsCheck();
-    // generate the flower path
+    // generate the clover path
     genPaths();
     // generate all the paints
     genPaints();
@@ -265,22 +273,8 @@ void tutorialInit(const VGint surfaceWidth,
     vgSetf(VG_STROKE_JOIN_STYLE, VG_JOIN_BEVEL);
     vgSeti(VG_RENDERING_QUALITY, VG_RENDERING_QUALITY_BETTER);
     vgSeti(VG_BLEND_MODE, VG_BLEND_SRC);
-
-    paintIndex = PAINT_COLOR;
-    linearInterpolation = VG_TRUE;
-    spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
-    tilingMode = VG_TILE_PAD;
-    // start with no rotation and put the path at the center of screen
-    animate = VG_FALSE;
-    rotation = 0.0f;
-    scale = 1.0f;
-    translation[0] = 0.0f;
-    translation[1] = 0.0f;
-    // disable scissoring and masking
-    scissoring = VG_FALSE;
-    scissorRectsConf = 1;
+    // upload scissor rectangles to the OpenVG backend
     toggleScissorRects(surfaceWidth, surfaceHeight);
-    masking = VG_FALSE;
 }
 
 void tutorialDestroy(void) {
@@ -389,7 +383,7 @@ void tutorialDraw(const VGint surfaceWidth,
     vgSeti(VG_SCISSORING, scissoring);
     // set alpha mask
     vgSeti(VG_MASKING, masking);
-    // draw the flower path
+    // draw the clover path
     vgDrawPath(path, VG_FILL_PATH);
 }
 
@@ -485,7 +479,7 @@ void removeGradientRepeat(void) {
 void addGradientRepeat(void) {
 
     if (conGradSupported) {
-        if (conGradRepeats < 4.0f) {
+        if (conGradRepeats < 4) {
             VGfloat conGradParams[5];
             // increase repeats
             conGradRepeats++;

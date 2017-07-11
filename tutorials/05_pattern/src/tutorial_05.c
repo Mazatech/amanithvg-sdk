@@ -46,15 +46,15 @@ static VGTilingMode tilingMode = VG_TILE_FILL;
 static VGfloat patternCenter[2] = { 0.0f };
 static VGfloat patternTarget[2] = { 0.0f };
 
-// mouse state
-static VGint oldMouseX = 0;
-static VGint oldMouseY = 0;
-static VGint mouseButton = MOUSE_BUTTON_NONE;
-
 // keep track of "path user to surface" translation
 static VGfloat userToSurfaceTranslation[2] = { 0.0f };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedControlPoint = CONTROL_POINT_NONE;
+
+// mouse state
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // calculate the distance between two points
 static VGfloat distance(const VGfloat x0,
@@ -338,10 +338,10 @@ void mouseLeftButtonDown(const VGint x,
     distTarget = distance(mouseX, mouseY, target[X_COORD], target[Y_COORD]);
     // check if we have picked a control point
     if (distCenter < distTarget) {
-        pickedControlPoint = (distCenter < controlPointsRadius) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
+        pickedControlPoint = (distCenter < controlPointsRadius * 1.1f) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
     }
     else {
-        pickedControlPoint = (distTarget < controlPointsRadius) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
+        pickedControlPoint = (distTarget < controlPointsRadius * 1.1f) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
     }
     // keep track of current mouse position
     oldMouseX = x;

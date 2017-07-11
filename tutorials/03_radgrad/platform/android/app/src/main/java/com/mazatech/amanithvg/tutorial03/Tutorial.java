@@ -30,7 +30,6 @@ class Tutorial {
     private VGPath filledCircle;
     private VGPath controlPoint;
     private VGPath radiusBorder;
-    private float controlPointsRadius;
     // paint objects
     private VGPaint solidCol;
     private VGPaint radGrad;
@@ -45,6 +44,7 @@ class Tutorial {
     // keep track of "path user to surface" transformation
     private float userToSurfaceScale;
     private float[] userToSurfaceTranslation;
+    private float controlPointsRadius;
     private int pickedHandle;
     // touch state
     float oldTouchX;
@@ -65,6 +65,11 @@ class Tutorial {
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
+        filledCircle = null;
+        controlPoint = null;
+        radiusBorder = null;
+        solidCol = null;
+        radGrad = null;
         radGradCenter = new float[] { 0.0f, 0.0f };
         radGradFocus = new float[] { 0.0f, 0.0f };
         radGradRadius = 0.0f;
@@ -73,8 +78,8 @@ class Tutorial {
         spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         userToSurfaceScale = 1.0f;
         userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
-        pickedHandle = GRADIENT_HANDLE_NONE;
         controlPointsRadius = 14.0f;
+        pickedHandle = GRADIENT_HANDLE_NONE;
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -344,14 +349,14 @@ class Tutorial {
         float distRadius = Math.abs(distCenter - gradRadius);
         // check if we have picked a gradient control point or the radius border
         if ((distCenter < distFocus) && (distCenter < distRadius)) {
-            pickedHandle = (distCenter < controlPointsRadius) ? GRADIENT_HANDLE_CENTER : GRADIENT_HANDLE_NONE;
+            pickedHandle = (distCenter < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_CENTER : GRADIENT_HANDLE_NONE;
         }
         else
         if ((distFocus < distCenter) && (distFocus < distRadius)) {
-            pickedHandle = (distFocus < controlPointsRadius) ? GRADIENT_HANDLE_FOCUS : GRADIENT_HANDLE_NONE;
+            pickedHandle = (distFocus < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_FOCUS : GRADIENT_HANDLE_NONE;
         }
         else {
-            pickedHandle = (distRadius < controlPointsRadius) ? GRADIENT_HANDLE_RADIUS : GRADIENT_HANDLE_NONE;
+            pickedHandle = (distRadius < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_RADIUS : GRADIENT_HANDLE_NONE;
         }
 
 

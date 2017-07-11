@@ -94,13 +94,6 @@ static void genPaths(void) {
 
 static void genImageBounds(void) {
 
-    static const VGubyte boundsCmd[5] = {
-        VG_MOVE_TO_ABS,
-        VG_LINE_TO_ABS,
-        VG_LINE_TO_ABS,
-        VG_LINE_TO_ABS,
-        VG_CLOSE_PATH
-    };
     VGfloat boundsCoords[] = {
         imageControlPoints[0].x, imageControlPoints[0].y,
         imageControlPoints[1].x, imageControlPoints[1].y,
@@ -109,7 +102,7 @@ static void genImageBounds(void) {
     };
 
     vgClearPath(imageBounds, VG_PATH_CAPABILITY_ALL);
-    vgAppendPathData(imageBounds, 5, boundsCmd, boundsCoords);
+    vguPolygon(imageBounds, boundsCoords, 4, VG_TRUE);
 }
 
 static void genImage(const VGint surfaceWidth,
@@ -284,7 +277,7 @@ void mouseLeftButtonDown(const VGint x,
         }
     }
     // check if we have picked a control point
-    pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius)) ? closestPoint : CONTROL_POINT_NONE;
+    pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
     // keep track of current mouse position
     oldMouseX = x;
     oldMouseY = y;

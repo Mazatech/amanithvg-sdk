@@ -47,16 +47,16 @@ static VGboolean linearInterpolation = VG_TRUE;
 static VGboolean smoothRampSupported = VG_FALSE;
 static VGColorRampSpreadMode spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
 
-// mouse state
-static VGint oldMouseX = 0;
-static VGint oldMouseY = 0;
-static VGint mouseButton = MOUSE_BUTTON_NONE;
-
 // keep track of "path user to surface" transformation
 static VGfloat userToSurfaceScale = 1.0f;
 static VGfloat userToSurfaceTranslation[2] = { 0.0f };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedHandle = GRADIENT_HANDLE_NONE;
+
+// mouse state
+static VGint oldMouseX = 0;
+static VGint oldMouseY = 0;
+static VGint mouseButton = MOUSE_BUTTON_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,
@@ -348,14 +348,14 @@ void mouseLeftButtonDown(const VGint x,
     distRadius = (VGfloat)fabs(distCenter - gradRadius);
     // check if we have picked a gradient control point or the radius border
     if ((distCenter < distFocus) && (distCenter < distRadius)) {
-        pickedHandle = (distCenter < controlPointsRadius) ? GRADIENT_HANDLE_CENTER : GRADIENT_HANDLE_NONE;
+        pickedHandle = (distCenter < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_CENTER : GRADIENT_HANDLE_NONE;
     }
     else
     if ((distFocus < distCenter) && (distFocus < distRadius)) {
-        pickedHandle = (distFocus < controlPointsRadius) ? GRADIENT_HANDLE_FOCUS : GRADIENT_HANDLE_NONE;
+        pickedHandle = (distFocus < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_FOCUS : GRADIENT_HANDLE_NONE;
     }
     else {
-        pickedHandle = (distRadius < controlPointsRadius) ? GRADIENT_HANDLE_RADIUS : GRADIENT_HANDLE_NONE;
+        pickedHandle = (distRadius < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_RADIUS : GRADIENT_HANDLE_NONE;
     }
 
     // keep track of current mouse position

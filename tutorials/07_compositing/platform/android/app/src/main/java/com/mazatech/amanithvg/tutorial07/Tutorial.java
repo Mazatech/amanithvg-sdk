@@ -35,12 +35,11 @@ class Tutorial {
     private VGPath flower;
     private VGPath controlPoint;
     private VGPath imageBounds;
-    private float controlPointsRadius;
     // paint objects
     private VGPaint solidCol;
     private VGPaint paintSrc;
     private VGPaint paintDst;
-    // image objects
+    // SRC and DST images
     private VGImage srcImage;
     private VGImage dstImage;
     private int imagesFormat;
@@ -50,6 +49,7 @@ class Tutorial {
     // current blend mode
     private int blendMode;
     private boolean extBlendModesSupported;
+    private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
     float oldTouchX;
@@ -71,15 +71,22 @@ class Tutorial {
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
+        flower = null;
+        controlPoint = null;
+        imageBounds = null;
+        solidCol = null;
+        paintSrc = null;
+        paintDst = null;
         srcImage = null;
         dstImage = null;
+        imagesFormat = VG_sRGBA_8888_PRE;
         imagesSize = 0;
         srcImagePos = new float[] { 0.0f, 0.0f };
         dstImagePos = new float[] { 0.0f, 0.0f };
-        extBlendModesSupported = false;
         blendMode = VG_BLEND_SRC_OVER;
-        pickedControlPoint = CONTROL_POINT_NONE;
+        extBlendModesSupported = false;
         controlPointsRadius = 14.0f;
+        pickedControlPoint = CONTROL_POINT_NONE;
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -428,10 +435,10 @@ class Tutorial {
         distDst = distance(x, y, dstImagePos[X_COORD], dstImagePos[Y_COORD]);
         // check if we have picked a gradient control point
         if (distSrc < distDst) {
-            pickedControlPoint = (distSrc < controlPointsRadius) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
+            pickedControlPoint = (distSrc < controlPointsRadius * 1.1f) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (distDst < controlPointsRadius) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
+            pickedControlPoint = (distDst < controlPointsRadius * 1.1f) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
         oldTouchX = x;

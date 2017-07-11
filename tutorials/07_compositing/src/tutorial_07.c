@@ -421,10 +421,10 @@ void mouseLeftButtonDown(const VGint x,
     distDst = distance(mouseX, mouseY, dstImagePos[X_COORD], dstImagePos[Y_COORD]);
     // check if we have picked a control point
     if (distSrc < distDst) {
-        pickedControlPoint = (distSrc < controlPointsRadius) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
+        pickedControlPoint = (distSrc < controlPointsRadius * 1.1f) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
     }
     else {
-        pickedControlPoint = (distDst < controlPointsRadius) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
+        pickedControlPoint = (distDst < controlPointsRadius * 1.1f) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
     }
     // keep track of current mouse position
     oldMouseX = x;

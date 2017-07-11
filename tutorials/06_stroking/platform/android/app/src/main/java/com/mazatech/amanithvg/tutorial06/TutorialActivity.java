@@ -183,7 +183,11 @@ public class TutorialActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
 
         // build the menu
-        menu.add(0, TUTORIAL_CHANGE_BLEND_MODE_CMD, 0, "Change blend mode");
+        menu.add(0, TUTORIAL_CHANGE_JOIN_STYLE_CMD, 0, "Change join style");
+        menu.add(0, TUTORIAL_CHANGE_START_CAP_STYLE_CMD, 0, "Change start cap style");
+        menu.add(0, TUTORIAL_CHANGE_END_CAP_STYLE_CMD, 0, "Change end cap style");
+        menu.add(0, TUTORIAL_CHANGE_DASH_PATTERN_CMD, 0, "Change dash pattern");
+        menu.add(0, TUTORIAL_TOGGLE_DASH_ANIMATION_CMD, 0, "Toggle dash animation");
         menu.add(0, TUTORIAL_ABOUT_CMD, 0, "About...");
         menu.add(0, QUIT_MENU_ITEM, 0, "Quit");
         return true;

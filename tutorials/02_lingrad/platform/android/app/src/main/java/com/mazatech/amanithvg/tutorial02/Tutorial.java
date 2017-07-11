@@ -29,7 +29,6 @@ class Tutorial {
     // path objects
     private VGPath filledCircle;
     private VGPath controlPoint;
-    private float controlPointsRadius;
     // paint objects
     private VGPaint solidCol;
     private VGPaint linGrad;
@@ -43,6 +42,7 @@ class Tutorial {
     // keep track of "path user to surface" transformation
     private float userToSurfaceScale;
     private float[] userToSurfaceTranslation;
+    private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
     float oldTouchX;
@@ -62,6 +62,10 @@ class Tutorial {
     Tutorial(AmanithVG vgInstance) {
 
         vg = vgInstance;
+        filledCircle = null;
+        controlPoint = null;
+        solidCol = null;
+        linGrad = null;
         linGradStart = new float[] { 0.0f, 0.0f };
         linGradEnd = new float[] { 0.0f, 0.0f };
         linearInterpolation = true;
@@ -69,8 +73,8 @@ class Tutorial {
         spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         userToSurfaceScale = 1.0f;
         userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
-        pickedControlPoint = CONTROL_POINT_NONE;
         controlPointsRadius = 14.0f;
+        pickedControlPoint = CONTROL_POINT_NONE;
         oldTouchX = 0.0f;
         oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
@@ -319,10 +323,10 @@ class Tutorial {
         distEnd = distance(mouseX, mouseY, gradEnd[X_COORD], gradEnd[Y_COORD]);
         // check if we have picked a gradient control point
         if (distStart < distEnd) {
-            pickedControlPoint = (distStart < controlPointsRadius) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
+            pickedControlPoint = (distStart < controlPointsRadius * 1.1f) ? CONTROL_POINT_START : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (distEnd < controlPointsRadius) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
+            pickedControlPoint = (distEnd < controlPointsRadius * 1.1f) ? CONTROL_POINT_END : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
         oldTouchX = x;
