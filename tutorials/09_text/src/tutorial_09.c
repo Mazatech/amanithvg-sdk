@@ -52,6 +52,7 @@ static VGfloat wavyTextFontSize = 0.0f;
 static ControlPoint controlPoints[6] = { { 0.0f, 0.0f } };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGboolean mustUpdatePathsAndFont = VG_FALSE;
 
 // mouse state
 static VGint oldMouseX = 0;
@@ -282,6 +283,14 @@ static void wavyTextDraw(void) {
 void tutorialDraw(const VGint surfaceWidth,
                   const VGint surfaceHeight) {
 
+    if (mustUpdatePathsAndFont) {
+        mustUpdatePathsAndFont = VG_FALSE;
+        // update OpenVG paths
+        updatePaths();
+        // update font size
+        textSizeUpdate();
+    }
+
     // clear the whole drawing surface
     vgClear(0, 0, surfaceWidth, surfaceHeight);
     // draw straight text
@@ -354,10 +363,9 @@ void mouseMove(const VGint x,
             // assign the new control point position
             controlPoints[pickedControlPoint].x = (VGfloat)x;
             controlPoints[pickedControlPoint].y = (VGfloat)y;
-            // update OpenVG paths
-            updatePaths();
-            // update font size
-            textSizeUpdate();
+            // we update paths and font within the 'tutorialDraw' function, in order to
+            // stick to the rendering thread
+            mustUpdatePathsAndFont = VG_TRUE;
         }
     }
 

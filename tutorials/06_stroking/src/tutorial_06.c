@@ -74,6 +74,7 @@ static VGfloat userToSurfaceTranslation[2] = { 0.0f };
 static ControlPoint controlPoints[12] = { { 0.0f, 0.0f } };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGboolean mustUpdatePaths = VG_FALSE;
 
 // mouse state
 static VGint oldMouseX = 0;
@@ -288,6 +289,10 @@ void tutorialDraw(const VGint surfaceWidth,
                   const VGint surfaceHeight) {
 
     VGint i;
+
+    if (mustUpdatePaths) {
+        updatePaths();
+    }
 
     // animate dash phase, if needed
     if (dashAnimate && (dashPattern != 0)) {
@@ -506,7 +511,9 @@ void mouseMove(const VGint x,
             controlPointSet(srfSpacePoint, userSpacePoint);
             controlPoints[pickedControlPoint].x = userSpacePoint[X_COORD];
             controlPoints[pickedControlPoint].y = userSpacePoint[Y_COORD];
-            updatePaths();
+            // we update paths within the 'tutorialDraw' function, in order to
+            // stick to the rendering thread
+            mustUpdatePaths = VG_TRUE;
         }
     }
 

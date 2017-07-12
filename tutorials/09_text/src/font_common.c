@@ -20,7 +20,7 @@
 static VGuint* tmpGlyphIndices = NULL;
 static VGfloat* tmpAdjustmentsX = NULL;
 static VGfloat* tmpAdjustmentsY = NULL;
-static VGuint tmpArraysSize = 0;
+static size_t tmpArraysSize = 0;
 
 // compare two mapped characters
 static VGint mappedCharsCompare(const void* arg0,
@@ -124,7 +124,7 @@ const KerningEntry* kerningFromCharCodes(const Font* font,
 }
 
 // reserve temporary memory to store glyph indices and kernings, for printing/drawing purposes
-static VGboolean tempMemoryReserve(const VGuint strLen) {
+static VGboolean tempMemoryReserve(const size_t strLen) {
 
     if (tmpArraysSize < strLen) {
 
@@ -231,7 +231,7 @@ VGfloat textLineWidth(const Font* font,
             vgSetfv(VG_GLYPH_ORIGIN, 2, glyphOrigin);
             vgSeti(VG_MATRIX_MODE, VG_MATRIX_GLYPH_USER_TO_SURFACE);
             vgLoadIdentity();
-            vgDrawGlyphs(font->openvgHandle, strLen, tmpGlyphIndices, tmpAdjustmentsX, tmpAdjustmentsY, 0, VG_FALSE);
+            vgDrawGlyphs(font->openvgHandle, (VGint)strLen, tmpGlyphIndices, tmpAdjustmentsX, tmpAdjustmentsY, 0, VG_FALSE);
             vgGetfv(VG_GLYPH_ORIGIN, 2, glyphOrigin);
             result = glyphOrigin[0];
         }
@@ -252,7 +252,7 @@ void textLineDraw(const Font* font,
             // build the sequence of glyph indices and kerning data
             textLineBuild(font, str, strLen);
             // draw glyphs
-            vgDrawGlyphs(font->openvgHandle, strLen, tmpGlyphIndices, tmpAdjustmentsX, tmpAdjustmentsY, paintModes, VG_FALSE);
+            vgDrawGlyphs(font->openvgHandle, (VGint)strLen, tmpGlyphIndices, tmpAdjustmentsX, tmpAdjustmentsY, paintModes, VG_FALSE);
         }
     }
 }

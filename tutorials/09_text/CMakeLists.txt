@@ -329,7 +329,7 @@ endif()
 set(APP_SOURCE_FILES ${APP_SOURCE_FILES}
     ${APP_SRC_DIR}/${PROJECT_NAME}.c
     ${APP_SRC_DIR}/font_common.c
-    ${APP_SRC_DIR}/arial_font.c)
+    ${APP_SRC_DIR}/vera_font.c)
 
 link_directories(${WS_LIBS_DIR} ${GLES_LIBS_DIR} ${OPENVG_LIBS_DIR})
 

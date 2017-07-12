@@ -49,6 +49,7 @@ static VGImageFormat imageFormat = VG_sRGBA_8888_PRE;
 static ControlPoint imageControlPoints[4] = { { 0.0f, 0.0f } };
 static VGfloat controlPointsRadius = 14.0f;
 static VGint pickedControlPoint = CONTROL_POINT_NONE;
+static VGboolean mustUpdatePaths = VG_FALSE;
 
 // mouse state
 static VGint oldMouseX = 0;
@@ -215,6 +216,10 @@ void tutorialDraw(const VGint surfaceWidth,
     VGfloat warpMatrix[9];
     VGfloat clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+    if (mustUpdatePaths) {
+        genImageBounds();
+    }
+
     // clear the whole drawing surface
     vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
     vgClear(0, 0, surfaceWidth, surfaceHeight);
@@ -318,7 +323,9 @@ void mouseMove(const VGint x,
             // set the new position for the selected control point
             imageControlPoints[pickedControlPoint].x = (VGfloat)x;
             imageControlPoints[pickedControlPoint].y = (VGfloat)y;
-            genImageBounds();
+            // we update paths within the 'tutorialDraw' function, in order to
+            // stick to the rendering thread
+            mustUpdatePaths = VG_TRUE;
         }
     }
 
