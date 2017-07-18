@@ -52,9 +52,9 @@ class Tutorial {
     private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
-    float oldTouchX;
-    float oldTouchY;
-    int touchState;
+    private float oldTouchX;
+    private float oldTouchY;
+    private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
@@ -302,7 +302,7 @@ class Tutorial {
 
         float dashPattern[] = new float[] { 10.0f, 10.0f };
         float imgCenter = (float)(imagesSize / 2);
-        // an opaque dark grey
+        // an opaque black
         float clearColor[] = new float[] { 0.0f, 0.0f, 0.0f, 1.0f };
 
         // clear the whole drawing surface

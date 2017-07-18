@@ -217,6 +217,7 @@ void tutorialDraw(const VGint surfaceWidth,
     VGfloat clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
     if (mustUpdatePaths) {
+        mustUpdatePaths = VG_FALSE;
         genImageBounds();
     }
 

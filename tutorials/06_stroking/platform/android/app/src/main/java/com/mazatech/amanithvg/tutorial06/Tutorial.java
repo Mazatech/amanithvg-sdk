@@ -52,11 +52,11 @@ class Tutorial {
     private int pickedControlPoint;
     boolean mustUpdatePaths;
     // random numbers generator
-    Random rnd;
+    private Random rnd;
     // touch state
-    float oldTouchX;
-    float oldTouchY;
-    int touchState;
+    private float oldTouchX;
+    private float oldTouchY;
+    private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;

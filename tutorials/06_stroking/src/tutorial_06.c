@@ -291,6 +291,7 @@ void tutorialDraw(const VGint surfaceWidth,
     VGint i;
 
     if (mustUpdatePaths) {
+        mustUpdatePaths = VG_FALSE;
         updatePaths();
     }
 

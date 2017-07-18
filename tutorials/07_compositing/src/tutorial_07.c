@@ -49,13 +49,14 @@ static VGfloat dstImagePos[2] = { 0.0f };
 static VGboolean extBlendModesSupported = VG_FALSE;
 static VGBlendMode blendMode = VG_BLEND_SRC_OVER;
 
+// control points
+static VGfloat controlPointsRadius = 14.0f;
+static VGint pickedControlPoint = CONTROL_POINT_NONE;
+
 // mouse state
 static VGint oldMouseX = 0;
 static VGint oldMouseY = 0;
 static VGint mouseButton = MOUSE_BUTTON_NONE;
-
-static VGfloat controlPointsRadius = 14.0f;
-static VGint pickedControlPoint = CONTROL_POINT_NONE;
 
 // check if a string can be found in an OpenVG extension string
 static VGboolean extensionFind(const char* string,
@@ -181,13 +182,13 @@ static void genImages(const VGint surfaceWidth,
                       const VGint surfaceHeight) {
 
 
-    VGfloat scl;
+    VGfloat scl, imgCenter;
     VGfloat black[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    VGfloat imgCenter =  (VGfloat)(imagesSize / 2);
     VGint minDim = (surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight;
     
     // 3/4 of the minimum surface dimension
     imagesSize = (minDim * 3) / 4;
+    imgCenter =  (VGfloat)(imagesSize / 2);
     scl = ((VGfloat)imagesSize / 384.0f) * 1.1f;
 
     // destroy previous images
@@ -286,7 +287,7 @@ void tutorialDraw(const VGint surfaceWidth,
 
     VGfloat dashPattern[2] = { 10.0f, 10.0f };
     VGfloat imgCenter = (VGfloat)(imagesSize / 2);
-    // an opaque dark grey
+    // an opaque black
     VGfloat clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // clear the whole drawing surface
