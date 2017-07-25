@@ -1,5 +1,5 @@
 # amanithvg-sdk
-AmanithVG SDK
+AmanithVG SDK - http://www.amanithvg.com
 
 AmanithVG is a commercial implementation of OpenVG 1.1 and 1.0.1, the application programming interface (API) for hardware accelerated 2D vector and raster graphics, created by the Khronos group. Born as a “OpenVG on OpenGL / OpenGL ES” engine, AmanithVG evolved into two different OpenVG graphic libraries.
 
