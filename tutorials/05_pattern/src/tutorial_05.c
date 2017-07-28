@@ -205,7 +205,7 @@ static void genPatternBounds(const VGfloat srfCenterPoint[],
 }
 
 void tutorialInit(const VGint surfaceWidth,
-                  const VGint surfaceHeight
+                  const VGint surfaceHeight,
                   const VGImageFormat preferredImageFormat) {
 
     // an opaque dark grey
