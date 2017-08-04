@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(tutorial_05)
+project(tutorial_06)
 set(CMAKE_BUILD_TYPE Release)
 
 function (get_os_subdir ret)
