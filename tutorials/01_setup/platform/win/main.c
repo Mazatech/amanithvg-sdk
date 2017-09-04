@@ -57,7 +57,7 @@ HINSTANCE applicationInstance;
     BITMAPINFO* vgSurfaceBitmapInfo;
 #endif
 // pressed keys buffer
-VGboolean keysPressed[256];
+VGboolean keysPressed[256] = { VG_FALSE };
 // OpenVG variables
 void* vgContext = NULL;
 void* vgWindowSurface = NULL;
