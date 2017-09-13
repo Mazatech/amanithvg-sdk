@@ -30,10 +30,12 @@
     eaglLayer = (CAEAGLLayer*)self.layer;
     eaglLayer.opaque = YES;
 
-    if ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)] && ([UIScreen mainScreen].scale == 2.0)) {
-        // Retina display
-        self.contentScaleFactor = 2.0;
-        eaglLayer.contentsScale = 2;
+    if ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)]) {
+        // take care of Retina display
+        if ([UIScreen mainScreen].scale > 0.0f) {
+            self.contentScaleFactor = [UIScreen mainScreen].scale;
+            eaglLayer.contentsScale = [UIScreen mainScreen].scale;
+        }
     }
 }
 
