@@ -53,7 +53,7 @@ else()
 
 endif()
 
-set(CMAKE_OSX_ARCHITECTURES "armv7" "arm64" CACHE string "Build architectures for iOS")
+set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE string "Build architectures for iOS")
 set(CMAKE_OSX_DEPLOYMENT_TARGET "9.3" CACHE string "Deployment target for iOS")
 set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "9.3" CACHE string "Xcode deployment target for iOS")
 

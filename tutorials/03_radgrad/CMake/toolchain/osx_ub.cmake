@@ -45,7 +45,7 @@ else()
 
 endif()
 
-set(CMAKE_OSX_ARCHITECTURES "i386" "x86_64" CACHE string "Build architectures for MacOS X")
+set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE string "Build architectures for MacOS X")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
