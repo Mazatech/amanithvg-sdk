@@ -64,7 +64,8 @@
     <true/>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
-        <string>armv7</string>
+        <!-- Include this key if your app or embedded bundle (i.e. extension, framework) is compiled only for the arm64 instruction set. Include this key for all 64-bit apps and embedded bundles. -->
+        <string>arm64</string>
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>
