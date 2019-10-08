@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -72,11 +72,11 @@ extern "C" {
 #elif defined(__ARMCC_VERSION) || (defined(__SYMBIAN32__) && defined(__ARMCC_2__))
     #define AM_CC_ARMCC __ARMCC_VERSION
 #elif defined(__RENESAS_VERSION__)
-	/* Renesas CS+ */
+    /* Renesas CS+ */
     #define AM_CC_RENESAS
 #elif defined(__ghs__)
-	/* Green Hills compiler */
-	#define AM_CC_GHS
+    /* Green Hills compiler */
+    #define AM_CC_GHS
 #else
     #error Unsupported compiler!
 #endif
@@ -99,6 +99,9 @@ extern "C" {
                 #define VG_API_CALL extern
             #endif
         #endif
+    #elif defined(AM_CC_ARMCC)
+        // ARM Compiler 6 (armclang)
+        #define VG_API_CALL __attribute__((visibility("default"))) extern
     #else
         #define VG_API_CALL
     #endif
@@ -112,9 +115,11 @@ extern "C" {
     #elif defined(AM_CC_GCC)
         #if defined(AM_MAKE_DYNAMIC_LIBRARY)
             #if defined(AM_GCC_HAS_CLASS_VISIBILITY)
-                #define VG_API_CALL __attribute__((visibility("default"))) extern
+                // 'extern' keyword can be omitted, because it is the default
+                #define VG_API_CALL __attribute__((visibility("default")))
             #else
-                #define VG_API_CALL extern
+                // 'extern' keyword can be omitted, because it is the default
+                #define VG_API_CALL
             #endif
         #else
             #define VG_API_CALL extern
@@ -153,7 +158,7 @@ typedef unsigned int   VGbitfield;
 
 #ifndef VG_VGEXT_PROTOTYPES
     #define VG_VGEXT_PROTOTYPES
-#endif 
+#endif
 
 #ifdef __cplusplus 
 } /* extern "C" */

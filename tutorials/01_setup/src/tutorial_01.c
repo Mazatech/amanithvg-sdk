@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -61,6 +61,7 @@ static VGboolean masking = VG_FALSE;
 
 // current transformation (start with no rotation and put the path at the center of screen)
 static VGfloat rotation = 0.0f;
+static VGfloat rotationInc = 0.5f;
 static VGfloat scale = 1.0f;
 static VGfloat translation[2] = { 0.0f };
 
@@ -315,7 +316,7 @@ void tutorialDraw(const VGint surfaceWidth,
     VGfloat scaleY = (VGfloat)surfaceHeight / 512.0f;
 
     if (animate == VG_TRUE) {
-        rotation += 0.05f;
+        rotation += rotationInc;
     }
 
     // we don't want to apply scissoring to the vgClear (i.e. we want to clear the whole drawing surface)
@@ -385,6 +386,12 @@ void tutorialDraw(const VGint surfaceWidth,
     vgSeti(VG_MASKING, masking);
     // draw the clover path
     vgDrawPath(path, VG_FILL_PATH);
+}
+
+void tutorialSpeedAdjust(const VGint fps) {
+
+    // 180 degrees rotation every second (suppose at least 10 fps, else we'll get too bigger steps)
+    rotationInc = (fps > 10.0f) ? (180.0f / ((VGfloat)fps + 1.0f)) : 18.0f;
 }
 
 /*****************************************************************

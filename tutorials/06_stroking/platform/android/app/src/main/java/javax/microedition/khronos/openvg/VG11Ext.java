@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -137,13 +137,18 @@ public interface VG11Ext extends VG {
     public static final int VG_CLIP_RULE_MZT                            = 0x1194;
     public static final int VG_CLIPPING_MZT                             = 0x1195;
     public static final int VG_MATRIX_CLIP_USER_TO_SURFACE_MZT          = 0x1405;
-
+    // Push a new clip path
     public void vgClipPathPushMZT(VGPath path);
+    // Pop out the last pushed clip path
     public void vgClipPathPopMZT();
+    // Clear the whole clip paths queue
     public void vgClipPathClearMZT();
 
     // VG_MZT_filters
     public void vgColorMatrixMZT(VGImage img, final float[] matrix);
+
+    // VG_MZT_mask
+    public void vgMaskMZT(VGHandle mask, int operation, int x, int y, int width, int height);
 
     // create OpenVG context
     public long vgPrivContextCreateMZT(long sharedContext);

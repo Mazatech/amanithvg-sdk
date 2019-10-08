@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2014 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -16,15 +16,26 @@
 #import "ViewController.h"
 #import "View.h"
 
-@implementation ViewController
+@implementation ViewController {
 
-- (void) viewDidLoad {
+    View *_view;
+}
+
+- (void)viewDidLoad {
 
     [super viewDidLoad];
-	CGRect screenBounds = [[UIScreen mainScreen] bounds];
-    // create the view
-    View* glView = [[View alloc] initWithFrame:screenBounds];
-    self.view = glView;
+
+    _view = (View *)self.view;
+#ifdef AM_SRE
+    // set the view to use the default device
+    _view.device = MTLCreateSystemDefaultDevice();
+    NSAssert(_view.device, @"Metal is not supported on this device");
+#endif
+    // initialize the view
+    [_view initView];
+#ifdef AM_SRE
+    _view.delegate = _view;
+#endif
 }
 
 @end

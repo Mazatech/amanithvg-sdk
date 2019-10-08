@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -391,7 +391,7 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
         AmanithVGJNI.vgMask(VGHandle.getHandle(mask), operation, x, y, width, height);
     }
 
-    public void vgMask(VGHandle mask, int operation, int x, int y, int width, int height) {
+    public void vgMask(VGMaskLayer mask, int operation, int x, int y, int width, int height) {
 
         AmanithVGJNI.vgMask(VGHandle.getHandle(mask), operation, x, y, width, height);
     }
@@ -1378,6 +1378,18 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
         vgColorMatrixMZT(img, matrix, 0);
     }
 
+    // VG_MZT_mask
+    public void vgMaskMZT(VGImage mask, int operation, int x, int y, int width, int height) {
+
+        AmanithVGJNI.vgMaskMZT(VGHandle.getHandle(mask), operation, x, y, width, height);
+    }
+
+    public void vgMaskMZT(VGMaskLayer mask, int operation, int x, int y, int width, int height) {
+
+        AmanithVGJNI.vgMaskMZT(VGHandle.getHandle(mask), operation, x, y, width, height);
+    }
+
+    // EGL-like API
     public long vgPrivContextCreateMZT(long sharedContext) {
 
         return AmanithVGJNI.vgPrivContextCreateMZT(sharedContext);
@@ -1388,10 +1400,10 @@ public class AmanithVG implements VG11, VGU11, VG11Ext {
         AmanithVGJNI.vgPrivContextDestroyMZT(context);
     }
 
-	public int vgPrivSurfaceMaxDimensionGetMZT() {
+    public int vgPrivSurfaceMaxDimensionGetMZT() {
 
-		return AmanithVGJNI.vgPrivSurfaceMaxDimensionGetMZT();
-	}
+        return AmanithVGJNI.vgPrivSurfaceMaxDimensionGetMZT();
+    }
 
     public long vgPrivSurfaceCreateMZT(int width, int height, boolean linearColorSpace, boolean alphaPremultiplied, boolean alphaMask) {
 

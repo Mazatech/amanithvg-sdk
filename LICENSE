@@ -10,11 +10,11 @@ The Parties agree that:
 
 Technology Description: 
 
-  - AmanithVG SRE v4.x, an EGL-less library for 2D vector graphics, with pure software rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code 
+  - AmanithVG SRE, an EGL-less library for 2D vector graphics, with pure software rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code 
 
 and 
 
-  - AmanithVG GLE v4.x, an EGL-less library for 2D vector graphics, with OpenGL and OpenGL ES 1.0+ CM aided rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code. 
+  - AmanithVG GLE, an EGL-less library for 2D vector graphics, with OpenGL and OpenGL ES 1.0+ CM aided rasterization, based on OpenVG 1.0.1 and OpenVG 1.1 specifications, in binary code. 
 
 During the term of the Agreement, Licensor may, at its sole option, provide Licensee with updates or error corrections to the Technology (collectively "Technology Updates"). If Licensor supplies Technology Updates to Licensee, the Technology Updates will be considered part of the Technology, and subject to the terms of this Agreement. 
 

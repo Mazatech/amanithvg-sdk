@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -58,15 +58,15 @@ extern "C" {
 #define VGU_VERSION_1_1 2
 
 #ifndef VGU_API_CALL
-	#error VGU_API_CALL must be defined
+    #error VGU_API_CALL must be defined
 #endif
 
 #ifndef VGU_API_ENTRY
-	#error VGU_API_ENTRY must be defined 
+    #error VGU_API_ENTRY must be defined 
 #endif
 
 #ifndef VGU_API_EXIT
-	#error VGU_API_EXIT must be defined 
+    #error VGU_API_EXIT must be defined 
 #endif
 
 typedef enum {
@@ -85,10 +85,10 @@ typedef enum {
 } VGUArcType;
 
 VGU_API_CALL VGUErrorCode VGU_API_ENTRY vguLine(VGPath path,
-                                                VGfloat x0,
-                                                VGfloat y0,
-                                                VGfloat x1,
-                                                VGfloat y1) VGU_API_EXIT;
+                                                VGfloat p0x,
+                                                VGfloat p0y,
+                                                VGfloat p1x,
+                                                VGfloat p1y) VGU_API_EXIT;
 
 VGU_API_CALL VGUErrorCode VGU_API_ENTRY vguPolygon(VGPath path,
                                                    const VGfloat *points,
@@ -152,13 +152,13 @@ VGU_API_CALL VGUErrorCode VGU_API_ENTRY vguComputeWarpQuadToQuad(VGfloat dx0,
                                                                  VGfloat dy2,
                                                                  VGfloat dx3,
                                                                  VGfloat dy3,
-												                 VGfloat sx0,
+                                                                 VGfloat sx0,
                                                                  VGfloat sy0,
-												                 VGfloat sx1,
+                                                                 VGfloat sx1,
                                                                  VGfloat sy1,
-												                 VGfloat sx2,
+                                                                 VGfloat sx2,
                                                                  VGfloat sy2,
-												                 VGfloat sx3,
+                                                                 VGfloat sx3,
                                                                  VGfloat sy3,
                                                                  VGfloat *matrix) VGU_API_EXIT;
 #if defined(__cplusplus)

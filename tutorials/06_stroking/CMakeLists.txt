@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(tutorial_06)
 set(CMAKE_BUILD_TYPE Release)
 
@@ -118,13 +118,13 @@ function (get_windowing_system_sdk ws_inc_dir ws_libs_dir ws_libs)
     endif()
 endfunction()    
 
-# get OpenGL / OpenGL ES SDK (includes and libs)
-function (get_gles_sdk gles_inc_dir gles_libs_dir gles_libs)
+# get OpenGL / OpenGL ES / Metal SDK (includes and libs)
+function (get_gfx_sdk gfx_inc_dir gfx_libs_dir gfx_libs)
 
     # set empty defaults
-    set(${gles_inc_dir} "" PARENT_SCOPE)
-    set(${gles_libs_dir} "" PARENT_SCOPE)
-    set(${gles_libs} "" PARENT_SCOPE)
+    set(${gfx_inc_dir} "" PARENT_SCOPE)
+    set(${gfx_libs_dir} "" PARENT_SCOPE)
+    set(${gfx_libs} "" PARENT_SCOPE)
 
     if (DEFINED ENGINE_GLE)
 
@@ -132,11 +132,11 @@ function (get_gles_sdk gles_inc_dir gles_libs_dir gles_libs)
 
         if (DEFINED OS_WINDOWS)
 
-            set(${gles_libs} "opengl32" PARENT_SCOPE)
+            set(${gfx_libs} "opengl32" PARENT_SCOPE)
 
         elseif (DEFINED OS_MACOSX)
 
-            set(${gles_libs} "-framework OpenGL" PARENT_SCOPE)
+            set(${gfx_libs} "-framework OpenGL" PARENT_SCOPE)
 
         elseif (DEFINED OS_LINUX)
 
@@ -144,50 +144,50 @@ function (get_gles_sdk gles_inc_dir gles_libs_dir gles_libs)
             if (EXISTS ${base_sdk_dir})
                 # we are cross compiling within our private building virtual machine
                 set(base_sdk_lib "${base_sdk_dir}/lib/linux")
-                set(${gles_inc_dir} "${base_sdk_dir}/include" PARENT_SCOPE)
+                set(${gfx_inc_dir} "${base_sdk_dir}/include" PARENT_SCOPE)
                 if (DEFINED ARCH_X86_64)
-                    set(${gles_libs_dir} "${base_sdk_lib}/x86_64" PARENT_SCOPE)
-                    set(${gles_libs} "GL" PARENT_SCOPE)
+                    set(${gfx_libs_dir} "${base_sdk_lib}/x86_64" PARENT_SCOPE)
+                    set(${gfx_libs} "GL" PARENT_SCOPE)
                 elseif (DEFINED ARCH_X86)
-                    set(${gles_libs_dir} "${base_sdk_lib}/x86" PARENT_SCOPE)
-                    set(${gles_libs} "GL" PARENT_SCOPE)
+                    set(${gfx_libs_dir} "${base_sdk_lib}/x86" PARENT_SCOPE)
+                    set(${gfx_libs} "GL" PARENT_SCOPE)
                 endif()
             else()
                 # we are compiling on a real user machine (so we assume that OpenGL development libraries are already installed within the system)
                 if (DEFINED ARCH_X86_64 OR DEFINED ARCH_X86 OR DEFINED ARCH_PPC64)
-                    set(${gles_libs} "GL" PARENT_SCOPE)
+                    set(${gfx_libs} "GL" PARENT_SCOPE)
                 else()
-                    set(${gles_libs} "GLES_CM" PARENT_SCOPE)
+                    set(${gfx_libs} "GLES_CM" PARENT_SCOPE)
                 endif()
             endif()
 
         elseif (DEFINED OS_IOS)
 
-            set(${gles_libs} "-framework OpenGLES" PARENT_SCOPE)
+            set(${gfx_libs} "-framework OpenGLES" PARENT_SCOPE)
 
         elseif (DEFINED OS_ANDROID)
 
             if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "QCC")
                 # the gcc-like way to link against shared libraries
-                set(${gles_libs} "-lGLESv1_CM -lEGL" PARENT_SCOPE)
+                set(${gfx_libs} "-lGLESv1_CM -lEGL" PARENT_SCOPE)
             endif()
 
         elseif (DEFINED OS_QNX)
 
             if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "QCC")
                 # the gcc-like way to link against shared libraries
-                set(${gles_libs} "-lGLESv1_CM -lEGL" PARENT_SCOPE)
+                set(${gfx_libs} "-lGLESv1_CM -lEGL" PARENT_SCOPE)
             endif()
 
         endif()
 
     elseif (DEFINED ENGINE_SRE)
 
-        # even when using AmanithVG SRE, we need OpenGL / OpenGL ES in order to blit OpenVG drawing surface pixels
+        # when using AmanithVG SRE, we need Metal in order to blit OpenVG drawing surface pixels
         if (DEFINED OS_MACOSX)
-            set(${gles_libs} "-framework OpenGL" PARENT_SCOPE)
+            set(${gfx_libs} "-framework Metal -framework MetalKit" PARENT_SCOPE)
         elseif (DEFINED OS_IOS)
-            set(${gles_libs} "-framework OpenGLES" PARENT_SCOPE)
+            set(${gfx_libs} "-framework Metal -framework MetalKit" PARENT_SCOPE)
         endif()
 
     endif()
@@ -205,8 +205,8 @@ get_backend_subdir(TARGET_ENGINE)
 # windowing system SDK
 get_windowing_system_sdk(WS_INC_DIR WS_LIBS_DIR WS_LIBS)
 
-# OpenGL / OpenGL ES SDK
-get_gles_sdk(GLES_INC_DIR GLES_LIBS_DIR GLES_LIBS)
+# OpenGL / OpenGL ES / Metal SDK
+get_gfx_sdk(GFX_INC_DIR GFX_LIBS_DIR GFX_LIBS)
 
 # OpenVG SDK
 set(OPENVG_BASE_DIR ${CMAKE_SOURCE_DIR}/../..)
@@ -302,7 +302,19 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             ${APP_SRC_PLATFORM_DIR}/images/ipad/Default-Landscape~ipad.png
             # Landscape Retina, 2048x1536
             ${APP_SRC_PLATFORM_DIR}/images/ipad/Default-Landscape@2x~ipad.png
-            )
+        )
+
+        set(APP_OTHER_RESOURCES
+            # storyboard files
+            ${APP_SRC_PLATFORM_DIR}/storyboards/LaunchScreen.storyboard
+            ${APP_SRC_PLATFORM_DIR}/storyboards/Main.storyboard
+        )
+        # AmanithVG SRE tutorials use Metal shaders
+        if (DEFINED ENGINE_SRE)
+            list(APPEND APP_OTHER_RESOURCES ${APP_SRC_PLATFORM_DIR}/programs.metal)
+            # generate a correct Xcode project with regard to shaders
+            set_source_files_properties(${APP_SRC_PLATFORM_DIR}/programs.metal PROPERTIES LANGUAGE METAL)
+        endif()
     else()
         # don't include the path in MACOSX_BUNDLE_ICON_FILE, this is the property added to Info.plist
         set(MACOSX_BUNDLE_ICON_FILE tutorial.icns)
@@ -314,6 +326,13 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         set(APP_ICON ${APP_SRC_PLATFORM_DIR}/${MACOSX_BUNDLE_ICON_FILE})
         # this part tells CMake where to find and install the file itself
         set_source_files_properties(${APP_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+        # AmanithVG SRE tutorials use Metal shaders
+        if (DEFINED ENGINE_SRE)
+            set(APP_OTHER_RESOURCES ${APP_SRC_PLATFORM_DIR}/programs.metal)
+            # generate a correct Xcode project with regard to shaders
+            set_source_files_properties(${APP_SRC_PLATFORM_DIR}/programs.metal PROPERTIES LANGUAGE METAL)
+        endif()
     endif()
 
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -328,9 +347,9 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
 endif()
 
-link_directories(${WS_LIBS_DIR} ${GLES_LIBS_DIR} ${OPENVG_LIBS_DIR})
+link_directories(${WS_LIBS_DIR} ${GFX_LIBS_DIR} ${OPENVG_LIBS_DIR})
 
-add_executable(${PROJECT_NAME} ${APP_SOURCE_FILES} ${APP_ICON})
+add_executable(${PROJECT_NAME} ${APP_SOURCE_FILES} ${APP_ICON} ${APP_OTHER_RESOURCES})
 
 # let the tutorial source code know the used AmanithVG rendering backend (SRE or GLE)
 if (DEFINED ENGINE_SRE)
@@ -342,7 +361,7 @@ endif()
 # include directories (windowing system, OpenGL / OpenGL ES, OpenVG, application)
 target_include_directories(${PROJECT_NAME}
                            PUBLIC ${WS_INC_DIR}
-                           PUBLIC ${GLES_INC_DIR}
+                           PUBLIC ${GFX_INC_DIR}
                            PUBLIC ${OPENVG_INC_DIR}
                            PUBLIC ${APP_SRC_PLATFORM_DIR}
                            PUBLIC ${APP_SRC_DIR})
@@ -350,7 +369,7 @@ target_include_directories(${PROJECT_NAME}
 # external needed libraries (windowing system, OpenGL / OpenGL ES, OpenVG)
 target_link_libraries(${PROJECT_NAME}
                       PUBLIC ${WS_LIBS}
-                      PUBLIC ${GLES_LIBS}
+                      PUBLIC ${GFX_LIBS}
                       PUBLIC ${OPENVG_LIB})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -383,7 +402,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                               # Universal application for both iPad and iPhone
                               XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
                               XCODE_ATTRIBUTE_DEVICES "Universal"
-                              RESOURCE "${APP_ICON}")
+                              RESOURCE "${APP_ICON} ${APP_OTHER_RESOURCES}")
         # include basic frameworks needed by the tutorial application (iOS)
         target_link_libraries(${PROJECT_NAME} PUBLIC "-framework CoreGraphics -framework QuartzCore -framework UIKit")
     else()

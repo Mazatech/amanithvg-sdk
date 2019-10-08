@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -65,6 +65,7 @@ void* vgWindowSurface = NULL;
 // FPS counter
 VGuint time0, time1;
 VGuint framesCounter;
+VGboolean adjustAnimation;
 char infoMessage[2048];
 VGboolean displayHelp, displayAbout, done;
 
@@ -409,6 +410,11 @@ static void windowTitleUpdate(void) {
         VGfloat fps = ((VGfloat)framesCounter * 1000.0f / (VGfloat)(time1 - time0));
         sprintf(title, "(%d fps) "WINDOW_TITLE, (VGint)fps);
         XStoreName(display, window, title);
+        // adjust tutorial animation speed
+        if (adjustAnimation) {
+            tutorialSpeedAdjust((VGint)(fps + 0.5f));
+            adjustAnimation = VG_FALSE;
+        }
         // reset frames counter
         framesCounter = 0;
         time0 = time1;
@@ -672,6 +678,7 @@ int main(int argc, char *argv[]) {
     // start frames counter
     time0 = getTimeMS();
     framesCounter = 0;
+    adjustAnimation = VG_TRUE;
 
     // enter main loop
     while (!done) {

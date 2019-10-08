@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -13,26 +13,35 @@
 ** For any information, please contact info@mazatech.com
 **
 ****************************************************************************/
-#import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
-#include <OpenGLES/ES1/gl.h>
-#include <OpenGLES/ES1/glext.h>
+#ifdef AM_SRE
+    #import <Metal/Metal.h>
+    #import <MetalKit/MetalKit.h>
+    #include <simd/simd.h>
+#else
+    #import <UIKit/UIKit.h>
+    #include <OpenGLES/ES1/gl.h>
+    #include <OpenGLES/ES1/glext.h>
+#endif
 #include "tutorial_01.h"
 
+#ifdef AM_SRE
+@interface View : MTKView <MTKViewDelegate, UIGestureRecognizerDelegate> {
+    // Metal command queue
+    id<MTLCommandQueue> mtlCommandQueue;
+    id<MTLLibrary> mtlLibrary;
+    // Metal rendering pipelines
+    id<MTLRenderPipelineState> mtlSurfacePipelineState;
+    // Metal texture used to blit the AmanithVG SRE surface
+    id<MTLTexture> blitTexture;
+    MTLTextureDescriptor* blitTextureDescriptor;
+#else
 @interface View : UIView <UIGestureRecognizerDelegate> {
-
     CAEAGLLayer* eaglLayer;
     // OpenGL ES 1.1 context
     EAGLContext* eaglContext;
     // DisplayLink
     CADisplayLink* displayLink;
-
-#ifdef AM_SRE
-    // framebuffer
-    GLuint frameBuffer;
-    // OpenGL ES color buffer
-    GLuint colorRenderBuffer;
-#else
     // framebuffers (resolved and multi-sampled)
     GLuint resolvedFrameBuffer;
     GLuint sampledFrameBuffer;
@@ -42,6 +51,7 @@
     // OpenGL ES depth buffer (multi-sampled)
     GLuint sampledDepthRenderBuffer;
 #endif
+    // keep track of backing bounds
     int colorRenderBufferWidth;
     int colorRenderBufferHeight;
     // keep track of OpenVG initialization
@@ -50,11 +60,11 @@
     void* vgContext;
     // OpenVG surface
     void* vgWindowSurface;
-    // OpenGL texture used to blit the AmanithVG SRE surface
-    GLuint blitTexture;
     // touch events
     float lastScale;
     float lastRotation;
 }
+
+- (void) initView;
 
 @end

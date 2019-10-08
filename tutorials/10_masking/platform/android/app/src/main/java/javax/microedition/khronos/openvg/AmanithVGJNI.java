@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -169,9 +169,12 @@ class AmanithVGJNI {
     // VG_MZT_filters
     public final static native void vgColorMatrixMZT(int img, final float[] matrix, int offset);
 
+    // VG_MZT_mask
+    public final static native void vgMaskMZT(int mask, int operation, int x, int y, int width, int height);
+
     public final static native long vgPrivContextCreateMZT(long sharedContext);
     public final static native void vgPrivContextDestroyMZT(long context);
-	public final static native int vgPrivSurfaceMaxDimensionGetMZT();
+    public final static native int vgPrivSurfaceMaxDimensionGetMZT();
     public final static native long vgPrivSurfaceCreateMZT(int width, int height, boolean linearColorSpace, boolean alphaPremultiplied, boolean alphaMask);
     public final static native long vgPrivSurfaceCreateFromImageMZT(int image, boolean alphaMask);
     public final static native boolean vgPrivSurfaceResizeMZT(long surface, int width, int height);

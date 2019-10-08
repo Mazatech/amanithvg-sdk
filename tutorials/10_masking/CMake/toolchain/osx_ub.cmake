@@ -1,25 +1,26 @@
-# Darwin 14
+# Darwin 19
 set(CMAKE_SYSTEM_NAME Darwin)
-set(CMAKE_SYSTEM_VERSION 14)
-set(APPLE true CACHE string "APPLE target")
+set(CMAKE_SYSTEM_VERSION 19)
+set(APPLE true CACHE STRING "APPLE target")
 # the 2 following variables are used internally by building scripts (i.e. not related to CMake variables)
-set(OS_MACOSX true CACHE string "MacOS X operating system (used internally, not related to CMake variables)")
-set(ARCH_UB true CACHE string "Universal binaries x86/x86_64 (used internally, not related to CMake variables)")
+set(OS_MACOSX true CACHE STRING "MacOS X operating system (used internally, not related to CMake variables)")
+set(ARCH_UB true CACHE STRING "Universal binaries x86/x86_64 (used internally, not related to CMake variables)")
 
 if (NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Darwin")
 
     # cross compiling for MacOS X on a non-Darwin host system (e.g. Linux)
     
     set(OSX_TOOLCHAIN /usr/osxcross)
-    set(OSX_SDK /usr/osxcross/SDK/MacOSX10.10.sdk)
+    set(OSX_SDK /usr/osxcross/SDK/MacOSX10.15.sdk)
+    set(OSX_BINARIES_PREFIX x86_64-apple-darwin${CMAKE_SYSTEM_VERSION}-)
 
-    set(CMAKE_C_COMPILER ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-clang)
-    set(CMAKE_CXX_COMPILER ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-clang++)
-    set(CMAKE_AR ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-ar CACHE FILEPATH "Archiver for MacOS X")
-    set(CMAKE_LD ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-ld CACHE FILEPATH "Linker for MacOS X")
-    set(CMAKE_LIPO ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-lipo CACHE FILEPATH "Lipo tool for MacOS X")
-    set(CMAKE_STRIP ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-strip CACHE FILEPATH "Strip tool for MacOS X")
-    set(CMAKE_INSTALL_NAME_TOOL ${OSX_TOOLCHAIN}/bin/x86_64-apple-darwin14-install_name_tool CACHE FILEPATH "install_name_tool for MacOS X")
+    set(CMAKE_C_COMPILER ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}clang)
+    set(CMAKE_CXX_COMPILER ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}clang++)
+    set(CMAKE_AR ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}ar CACHE FILEPATH "Archiver for MacOS X")
+    set(CMAKE_LD ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}ld CACHE FILEPATH "Linker for MacOS X")
+    set(CMAKE_LIPO ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}lipo CACHE FILEPATH "Lipo tool for MacOS X")
+    set(CMAKE_STRIP ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}strip CACHE FILEPATH "Strip tool for MacOS X")
+    set(CMAKE_INSTALL_NAME_TOOL ${OSX_TOOLCHAIN}/bin/${OSX_BINARIES_PREFIX}install_name_tool CACHE FILEPATH "install_name_tool for MacOS X")
 
     set(CMAKE_OSX_SYSROOT ${OSX_SDK})
     set(CMAKE_FIND_ROOT_PATH ${OSX_TOOLCHAIN} ${OSX_SDK}/usr)
@@ -45,17 +46,19 @@ else()
 
 endif()
 
-set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE string "Build architectures for MacOS X")
+set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures for MacOS X")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Deployment target for MacOS X")
+
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-set(CC_NO_UNINITIALIZED_WARNING "-Wno-uninitialized" CACHE string "No uninitialized variable warning for MacOS X compiler")
+set(CC_NO_UNINITIALIZED_WARNING "-Wno-uninitialized" CACHE STRING "No uninitialized variable warning for MacOS X compiler")
 
 # common flags
 set(MACOSX_COMMON_C_FLAGS "-O2 -ffast-math -fno-exceptions -fno-strict-aliasing -fomit-frame-pointer -Wall -W")
 set(MACOSX_COMMON_CXX_FLAGS "${MACOSX_COMMON_C_FLAGS} -fno-rtti")
 
 # flags for Release build type or configuration
-set(CMAKE_C_FLAGS_RELEASE "${MACOSX_COMMON_C_FLAGS}" CACHE string "Compiler C flags used by release builds for MacOS X")
-set(CMAKE_CXX_FLAGS_RELEASE "${MACOSX_COMMON_CXX_FLAGS}" CACHE string "Compiler C++ flags used by release builds for MacOS X")
+set(CMAKE_C_FLAGS_RELEASE "${MACOSX_COMMON_C_FLAGS}" CACHE STRING "Compiler C flags used by release builds for MacOS X")
+set(CMAKE_CXX_FLAGS_RELEASE "${MACOSX_COMMON_CXX_FLAGS}" CACHE STRING "Compiler C++ flags used by release builds for MacOS X")

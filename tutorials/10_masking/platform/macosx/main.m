@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -14,9 +14,16 @@
 **
 ****************************************************************************/
 #import <Cocoa/Cocoa.h>
-#import <QuartzCore/CVDisplayLink.h>
-#import <OpenGL/OpenGL.h>
-#include <OpenGL/gl.h>
+#ifdef AM_SRE
+    #import <Metal/Metal.h>
+    #import <MetalKit/MetalKit.h>
+    // header shared between C code here, which executes Metal API commands, and .metal files, which uses these types as inputs to the shaders.
+    #import "ShaderTypes.h"
+#else
+    #import <QuartzCore/CVDisplayLink.h>
+    #import <OpenGL/OpenGL.h>
+    #include <OpenGL/gl.h>
+#endif
 #include <time.h>
 #include <sys/time.h>
 #include "tutorial_10.h"
@@ -44,69 +51,32 @@ VGboolean done;
 /*****************************************************************
                         View (interface)
 *****************************************************************/
-@interface TutorialView : NSOpenGLView <NSWindowDelegate> {
-
-    // OpenVG context
-    void *vgContext;
-    // OpenVG surface
-    void *vgWindowSurface;
 #ifdef AM_SRE
-    // OpenGL texture used to blit the AmanithVG SRE surface
-    GLuint blitTexture;
-#endif
+@interface TutorialView : MTKView <MTKViewDelegate, NSWindowDelegate> {
+    // Metal command queue
+    id<MTLCommandQueue> mtlCommandQueue;
+    id<MTLLibrary> mtlLibrary;
+    // Metal rendering pipelines
+    id<MTLRenderPipelineState> mtlSurfacePipelineState;
+    // Metal texture used to blit the AmanithVG SRE surface
+    id<MTLTexture> blitTexture;
+    MTLTextureDescriptor* blitTextureDescriptor;
+#else
+@interface TutorialView : NSOpenGLView <NSWindowDelegate> {
     // a Core Video display link 
     CVDisplayLinkRef displayLink;
+#endif
+    // keep track of backing bounds
+    VGint colorRenderBufferWidth;
+    VGint colorRenderBufferHeight;
+    // OpenVG context
+    void* vgContext;
+    // OpenVG surface
+    void* vgWindowSurface;
     // fps counter
     VGuint time0, time1;
     VGuint framesCounter;
 }
-
-/*****************************************************************
-                            OpenVG
-*****************************************************************/
-- (VGboolean) openvgInit :(const VGuint)width :(const VGuint)height;
-- (void) openvgDestroy;
-- (VGint) openvgSurfaceWidthGet;
-- (VGint) openvgSurfaceHeightGet;
-- (VGint) openvgSurfaceMaxDimensionGet;
-#ifdef AM_SRE
-    // setup the texture that will be used to blit AmanithVG SRE surface
-    - (void) blitTextureGenerate;
-    - (void) blitTextureResize :(const VGuint)width :(const VGuint)height;
-    - (void) blitTextureDestroy;
-    - (void) blitTextureDraw;
-#endif
-
-/*****************************************************************
-                       Windowing system
-*****************************************************************/
-- (void) messageDialog :(const char*)title :(const char*)message;
-- (void) aboutDialog;
-- (void) helpDialog;
-- (VGuint) getTimeMS;
-- (void) windowTitleUpdate;
-// Core Video display link
-- (CVReturn)getFrameForTime :(const CVTimeStamp *)outputTime;
-// implementation of NSOpenGLView methods
-- (id) initWithFrame :(NSRect)frameRect;
-- (void) prepareOpenGL;
-- (void) drawRect :(NSRect)dirtyRect;
-- (void) reshape;
-- (void) dealloc;
-// mouse and keyboard events
-- (void) mouseDown :(NSEvent *)theEvent;
-- (void) mouseUp :(NSEvent *)theEvent;
-- (void) mouseDragged:(NSEvent *)theEvent;
-- (void) rightMouseDown :(NSEvent *)theEvent;
-- (void) rightMouseUp :(NSEvent *)theEvent;
-- (void) rightMouseDragged:(NSEvent *)theEvent;
-- (void) keyDown :(NSEvent *)theEvent;
-- (BOOL) acceptsFirstResponder;
-- (BOOL) becomeFirstResponder;
-- (BOOL) resignFirstResponder;
-- (BOOL) isFlipped;
-// menu handlers
-- (void) applicationTerminate :(id)sender;
 
 @end
 
@@ -173,80 +143,368 @@ VGboolean done;
 
 #ifdef AM_SRE
 
-- (void) blitTextureGenerate {
+- (const void*) openvgSurfacePixelsGet {
 
-    // get AmanithVG SRE surface pixels pointer
-    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
-
-    // generate a 2D rectangular texture
-    glGenTextures(1, &blitTexture);
-    glEnable(GL_TEXTURE_RECTANGLE_ARB);
-    glDisable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_RECTANGLE_ARB, blitTexture);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_CACHED_APPLE);
-    glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // select best format, in order to avoid swizzling
-    glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, [self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet], 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, surfacePixels);
-
-    // setup basic OpenGL states
-    glEnable(GL_MULTISAMPLE);
-    glDisable(GL_LIGHTING);
-    glShadeModel(GL_FLAT);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glDepthMask(GL_FALSE);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    return vgPrivGetSurfacePixelsMZT(vgWindowSurface);
 }
 
 - (void) blitTextureResize :(const VGuint)width :(const VGuint)height {
 
-    // resize the OpenGL texture used to blit AmanithVG SRE drawing surface
-    glBindTexture(GL_TEXTURE_RECTANGLE_ARB, blitTexture);
-    glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, vgPrivGetSurfacePixelsMZT(vgWindowSurface));
+    [self blitTextureDestroy];
+    // set texture dimensions, in pixels
+    blitTextureDescriptor.width = width;
+    blitTextureDescriptor.height = height;
+    // create the texture from the device by using the descriptor
+    blitTexture = [[self device] newTextureWithDescriptor:blitTextureDescriptor];
+}
+
+- (void) blitTextureGenerate {
+
+    blitTextureDescriptor = [[MTLTextureDescriptor alloc] init];
+    // indicate that each pixel has a blue, green, red, and alpha channel, where each channel is
+    // an 8-bit unsigned normalized value (i.e. 0 maps to 0.0 and 255 maps to 1.0)
+    blitTextureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    [self blitTextureResize :[self openvgSurfaceWidthGet] :[self openvgSurfaceHeightGet]];
 }
 
 - (void) blitTextureDestroy {
 
-    if (blitTexture != 0) {
-        glDeleteTextures(1, &blitTexture);
+    if (blitTexture != nil) {
+        [blitTexture setPurgeableState:MTLPurgeableStateEmpty];
+        [blitTexture release];
+        blitTexture = nil;
     }
 }
 
 - (void) blitTextureDraw {
 
-    // get AmanithVG surface dimensions and pixels pointer
-    VGint surfaceWidth = [self openvgSurfaceWidthGet];
-    VGint surfaceHeight = [self openvgSurfaceHeightGet];
-    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
+    id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue commandBuffer];
+    // obtain a render pass descriptor generated from the view's drawable textures
+    MTLRenderPassDescriptor* passDescriptor = [self currentRenderPassDescriptor];
+
+    if (passDescriptor != nil) {
+
+        vector_uint2 viewportSize;
+        id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
+        // get AmanithVG surface dimensions and pixels pointer
+        VGint surfaceWidth = [self openvgSurfaceWidthGet];
+        VGint surfaceHeight = [self openvgSurfaceHeightGet];
+        const void* surfacePixels = [self openvgSurfacePixelsGet];
+        // triangle strip
+        const TexturedVertex rectVertices[4] = {
+            // pixel positions                 texture coordinates
+            { { 0.0f, 0.0f },                  { 0.0f, 1.0f } },
+            { { surfaceWidth, 0.0f },          { 1.0f, 1.0f } },
+            { { 0.0f, surfaceHeight },         { 0.0f, 0.0f } },
+            { { surfaceWidth, surfaceHeight }, { 1.0f, 0.0f } }
+        };
+        MTLRegion region = {
+            { 0, 0, 0 },                        // MTLOrigin
+            { surfaceWidth, surfaceHeight, 1 }  // MTLSize
+        };
+
+        // upload AmanithVG surface pixels onto the texture
+        [blitTexture replaceRegion:region mipmapLevel:0 withBytes:surfacePixels bytesPerRow:surfaceWidth*4];
+
+        // set the region of the drawable to draw into
+        [commandEncoder setViewport:(MTLViewport){ 0.0, 0.0, colorRenderBufferWidth, colorRenderBufferHeight, 0.0, 1.0 }];
+        [commandEncoder setRenderPipelineState:mtlSurfacePipelineState];
+        [commandEncoder setFragmentTexture:blitTexture atIndex:0];
+        // put the texture
+        viewportSize.x = colorRenderBufferWidth;
+        viewportSize.y = colorRenderBufferHeight;
+        [commandEncoder setVertexBytes:rectVertices length:sizeof(rectVertices) atIndex:0];
+        [commandEncoder setVertexBytes:&viewportSize length:sizeof(viewportSize) atIndex:1];
+        [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+        // we have finished
+        [commandEncoder endEncoding];
+        [commandBuffer presentDrawable:[self currentDrawable]];
+    }
+
+    // finalize rendering and push the command buffer to the GPU
+    [commandBuffer commit];
+    // acknowledge AmanithVG that we have performed a swapbuffers
+    vgPostSwapBuffersMZT();
+}
+
+- (VGboolean) metalInit:(id<MTLDevice>)device {
+
+    VGboolean ok = VG_TRUE;
+    __autoreleasing NSError* error = nil;
+
+    self.device = device;
+    self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+    self.framebufferOnly = YES;
+    self.autoResizeDrawable = YES;
+    self.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
+    self.delegate = self;
+
+    // keep track of Metal command queue
+    mtlCommandQueue = [[self device] newCommandQueue];
+    mtlLibrary = [[self device] newDefaultLibrary];
+
+    // configure a pipeline descriptor that is used to blit AmanithVG SRE surface
+    id<MTLFunction> surfaceVertexFunction = [mtlLibrary newFunctionWithName:@"texturedVertexShader"];
+    id<MTLFunction> surfaceFragmentFunction = [mtlLibrary newFunctionWithName:@"texturedFragmentShader"];
+    MTLRenderPipelineDescriptor* surfacePipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    surfacePipelineStateDescriptor.label = @"Draw surface texture pipeline";
+    surfacePipelineStateDescriptor.vertexFunction = surfaceVertexFunction;
+    surfacePipelineStateDescriptor.fragmentFunction = surfaceFragmentFunction;
+    surfacePipelineStateDescriptor.colorAttachments[0].pixelFormat = [self colorPixelFormat];
+    mtlSurfacePipelineState = [[self device] newRenderPipelineStateWithDescriptor:surfacePipelineStateDescriptor error:&error];
+    if (!mtlSurfacePipelineState) {
+        NSLog(@"metalInit: failed to create surface pipeline state: %@", error);
+        ok = VG_FALSE;
+    }
+    return ok;
+}
+
+// implementation of MTKView and MTKViewDelegate methods
+- (id) initWithFrame :(CGRect)frameRect device:(id<MTLDevice>)device {
+
+    self = [super initWithFrame:frameRect device:device];
+    if (self != nil) {
+        // initialize Metal pipelines
+        if ([self metalInit:device]) {
+            // NB: drawableSizeWillChange event is NOT called when the view/window is first opened
+            // so we must initialize backing bounds variables here
+            NSRect backedRect = [self convertRectToBacking:frameRect];
+            colorRenderBufferWidth = backedRect.size.width;
+            colorRenderBufferHeight = backedRect.size.height;
+            // init OpenVG
+            vgContext = NULL;
+            vgWindowSurface = NULL;
+            if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
+                // init tutorial application (OpenVG related code)
+                tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+                // generate Metal texture used to blit the AmanithVG SRE surface
+                [self blitTextureGenerate];
+                // start frame counter
+                time0 = [self getTimeMS];
+                framesCounter = 0;
+            }
+            else {
+                NSLog(@"initWithFrame: unable to initialize AmanithVG");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else {
+            NSLog(@"initWithFrame: unable to initialize Metal");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return self;
+}
+
+// called whenever view changes orientation or layout is changed; NB: this method is NOT called when the view/window is first opened
+- (void) mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
+
+    VGint surfaceWidth, surfaceHeight;
+
+    (void)view;
+    // save the size of the drawable to pass to the vertex shader
+    colorRenderBufferWidth = size.width;
+    colorRenderBufferHeight = size.height;
+
+    // resize AmanithVG surface
+    vgPrivSurfaceResizeMZT(vgWindowSurface, colorRenderBufferWidth, colorRenderBufferHeight);
+    surfaceWidth = [self openvgSurfaceWidthGet];
+    surfaceHeight = [self openvgSurfaceHeightGet];
+    [self blitTextureResize :surfaceWidth :surfaceHeight];
+
+    // inform tutorial that surface has been resized
+    tutorialResize(surfaceWidth, surfaceHeight);
+}
+
+// MTKView by default has its own loop continuously calling the delegate's drawInMTKView method
+- (void) drawInMTKView :(nonnull MTKView *)view {
+
+    (void)view;
+
+    // draw OpenVG content
+    tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+    // blit AmanithVG drawing surface, using a texture
+    [self blitTextureDraw];
+    // advance the frames counter
+    framesCounter++;
+}
+
+#else
+
+// Core Video display link
+- (CVReturn)getFrameForTime :(const CVTimeStamp *)outputTime {
+
+    // deltaTime is unused in this application, but here's how to calculate it using display link info
+    // double deltaTime = 1.0 / (outputTime->rateScalar * (double)outputTime->videoTimeScale / (double)outputTime->videoRefreshPeriod);
+    (void)outputTime;
+
+    // there is no autorelease pool when this method is called because it will be called from a background thread
+    // it's important to create one or app can leak objects
+    @autoreleasepool {
+        [self drawRect];
+    }
+
+    return kCVReturnSuccess;
+}
+
+static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
+                                    const CVTimeStamp* now,
+                                    const CVTimeStamp* outputTime,
+                                    CVOptionFlags flagsIn,
+                                    CVOptionFlags* flagsOut,
+                                    void* displayLinkContext) {
+
+    (void)displayLink;
+    (void)now;
+    (void)outputTime;
+    (void)flagsIn;
+    (void)flagsOut;
     
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // simply put a quad, covering the whole window
-    glBindTexture(GL_TEXTURE_RECTANGLE_ARB, blitTexture);
-    glTexSubImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, surfaceWidth, surfaceHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, surfacePixels);
-    glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex2f(-1.0f, 1.0f);
-        glTexCoord2f(0.0f, surfaceHeight);
-        glVertex2f(-1.0f, -1.0f);
-        glTexCoord2f(surfaceWidth, surfaceHeight);
-        glVertex2f(1.0f, -1.0f);
-        glTexCoord2f(surfaceWidth, 0.0f);
-        glVertex2f(1.0f, 1.0f);
-    glEnd();
+    CVReturn result = [(__bridge TutorialView*)displayLinkContext getFrameForTime:outputTime];
+    return result;
+}
+
+// implementation of NSOpenGLView methods
+- (id) initWithFrame :(NSRect)frameRect {
+
+    NSOpenGLPixelFormatAttribute attributes[] = {
+        NSOpenGLPFAAccelerated,
+        NSOpenGLPFANoRecovery,
+        NSOpenGLPFADoubleBuffer,
+        NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
+        NSOpenGLPFAColorSize, 32,
+        NSOpenGLPFASupersample,
+        NSOpenGLPFADepthSize, 24,
+        NSOpenGLPFAStencilSize, 8,
+        NSOpenGLPFASampleBuffers, 1,
+        NSOpenGLPFASamples, 8,
+        (NSOpenGLPixelFormatAttribute)0
+    };
+    NSOpenGLPixelFormat *format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
+
+    if (!format) {
+        NSLog(@"initWithFrame: unable to create pixel format");
+        exit(EXIT_FAILURE);
+    }
+
+    self = [super initWithFrame: frameRect pixelFormat: format];
+    [format release];
+
+    // initialize private members
+    vgContext = NULL;
+    vgWindowSurface = NULL;
+    return self;
+}
+
+- (void) prepareOpenGL {
+
+    // take care of Retina display
+    [self setWantsBestResolutionOpenGLSurface:YES];
+    [super prepareOpenGL];
+
+    // the reshape function may have changed the thread to which our OpenGL
+    // context is attached before prepareOpenGL and initGL are called.  So call
+    // makeCurrentContext to ensure that our OpenGL context current to this 
+    // thread (i.e. makeCurrentContext directs all OpenGL calls on this thread
+    // to [self openGLContext])
+    [[self openGLContext] makeCurrentContext];
+
+    // do not synchronize buffer swaps with vertical refresh rate
+    GLint swapInt = 0;
+    [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
+
+    // get view dimensions in pixels, taking care of Retina display
+    // see https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/EnablingOpenGLforHighResolution/EnablingOpenGLforHighResolution.html
+    NSRect backingBounds = [self convertRectToBacking:[self bounds]];
+
+    // init OpenVG
+    if ([self openvgInit :(VGint)backingBounds.size.width :(VGint)backingBounds.size.height]) {
+
+        // init tutorial application (OpenVG related code)
+        tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+
+        // create a display link capable of being used with all active displays
+        CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
+
+        // set the renderer output callback function
+        CVDisplayLinkSetOutputCallback(displayLink, &displayLinkCallback, (__bridge void*)self);
+
+        // set the display link for the current renderer
+        CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
+        CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
+        CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(displayLink, cglContext, cglPixelFormat);
+
+        // activate the display link
+        CVDisplayLinkStart(displayLink);
+
+        // start frame counter
+        time0 = [self getTimeMS];
+        framesCounter = 0;
+    }
+    else {
+        NSLog(@"prepareOpenGL: unable to initialize AmanithVG");
+        exit(EXIT_FAILURE);
+    }
+}
+
+- (void) drawRect {
+
+    if ([self lockFocusIfCanDraw]) {
+    
+        [[self openGLContext] makeCurrentContext];
+
+        // we draw on a secondary thread through the display link when resizing the view, -reshape is called automatically on the main thread
+        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
+        CGLLockContext([[self openGLContext] CGLContextObj]);
+
+        // draw OpenVG content
+        tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+
+        // copy a double-buffered context’s back buffer to its front buffer
+        CGLFlushDrawable([[self openGLContext] CGLContextObj]);
+
+        // acknowledge AmanithVG that we have performed a swapbuffers
+        vgPostSwapBuffersMZT();
+
+        // unlock the context
+        CGLUnlockContext([[self openGLContext] CGLContextObj]);
+        [self unlockFocus];
+
+        // advance the frames counter
+        framesCounter++;
+    }
+}
+
+// this method is called whenever the window/control is reshaped, it is also called when the control is first opened
+- (void) reshape {
+
+    [super reshape];
+
+    if ([self lockFocusIfCanDraw]) {
+
+        [[self openGLContext] makeCurrentContext];
+
+        // we draw on a secondary thread through the display link, however, when resizing the view, -drawRect is called on the main thread
+        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
+        CGLLockContext([[self openGLContext] CGLContextObj]);
+
+        // update the receiver's drawable object
+        [[self openGLContext] update];
+
+        // get view dimensions in pixels, taking care of Retina display
+        // see https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/EnablingOpenGLforHighResolution/EnablingOpenGLforHighResolution.html
+        NSRect backingBounds = [self convertRectToBacking:[self bounds]];
+        
+        // resize AmanithVG drawing surface
+        vgPrivSurfaceResizeMZT(vgWindowSurface, (VGint)backingBounds.size.width, (VGint)backingBounds.size.height);
+        // acknowledge tutorial about the resize
+        tutorialResize([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+
+        // unlock the context
+        CGLUnlockContext([[self openGLContext] CGLContextObj]);
+        [self unlockFocus];
+    }
 }
 
 #endif // AM_SRE
@@ -332,7 +590,7 @@ static const char* maskOperationStr(const VGMaskOperation maskOperation) {
         "SET",
         "UNION",
         "INTERSECT",
-        "SUBTRACT"
+        "SUBTRACT",
         "Unknown"
     };
 
@@ -358,220 +616,26 @@ static const char* maskOperationStr(const VGMaskOperation maskOperation) {
     }
 }
 
-// Core Video display link
-- (CVReturn)getFrameForTime :(const CVTimeStamp *)outputTime {
-
-    // deltaTime is unused in this application, but here's how to calculate it using display link info
-    // double deltaTime = 1.0 / (outputTime->rateScalar * (double)outputTime->videoTimeScale / (double)outputTime->videoRefreshPeriod);
-    (void)outputTime;
-
-    // there is no autorelease pool when this method is called because it will be called from a background thread
-    // it's important to create one or app can leak objects
-    @autoreleasepool {
-        [self drawRect:[self bounds]];
-    }
-
-    return kCVReturnSuccess;
-}
-
-static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
-                                    const CVTimeStamp* now,
-                                    const CVTimeStamp* outputTime,
-                                    CVOptionFlags flagsIn,
-                                    CVOptionFlags* flagsOut,
-                                    void* displayLinkContext) {
-
-    (void)displayLink;
-    (void)now;
-    (void)outputTime;
-    (void)flagsIn;
-    (void)flagsOut;
-    
-    CVReturn result = [(__bridge TutorialView*)displayLinkContext getFrameForTime:outputTime];
-    return result;
-}
-
-// implementation of NSOpenGLView methods
-- (id) initWithFrame :(NSRect)frameRect {
-
-    NSOpenGLPixelFormatAttribute attributes[] = {
-        NSOpenGLPFAAccelerated,
-        NSOpenGLPFANoRecovery,
-        NSOpenGLPFADoubleBuffer,
-        NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
-        NSOpenGLPFAColorSize, 32,
-    #ifndef AM_SRE
-        // AmanithVG GLE
-        NSOpenGLPFASupersample,
-        NSOpenGLPFADepthSize, 24,
-        NSOpenGLPFAStencilSize, 8,
-        NSOpenGLPFASampleBuffers, 1,
-        NSOpenGLPFASamples, 8,
-    #endif
-        (NSOpenGLPixelFormatAttribute)0
-    };
-    NSOpenGLPixelFormat *format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
-
-    if (!format) {
-        NSLog(@"Unable to create pixel format.");
-        exit(EXIT_FAILURE);
-    }
-
-    self = [super initWithFrame: frameRect pixelFormat: format];
-    [format release];
-
-    // initialize private members
-    vgContext = NULL;
-    vgWindowSurface = NULL;
-#ifdef AM_SRE
-    blitTexture = 0;
-#endif
-    return self;
-}
-
-- (void) prepareOpenGL {
-
-    [super prepareOpenGL];
-
-    // the reshape function may have changed the thread to which our OpenGL
-    // context is attached before prepareOpenGL and initGL are called.  So call
-    // makeCurrentContext to ensure that our OpenGL context current to this 
-    // thread (i.e. makeCurrentContext directs all OpenGL calls on this thread
-    // to [self openGLContext])
-    [[self openGLContext] makeCurrentContext];
-
-    // do not synchronize buffer swaps with vertical refresh rate
-    GLint swapInt = 0;
-    [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
-
-    // get frame dimensions
-    NSSize bound = [self frame].size;
-    VGint width = (VGint)bound.width;
-    VGint height = (VGint)bound.height;
-
-    // init OpenVG
-    if ([self openvgInit :width :height]) {
-    #ifdef AM_SRE
-        // create and setup the texture used to blit AmanithVG SRE surface
-        [self blitTextureGenerate];
-    #endif
-    }
-    else {
-        NSLog(@"Unable to initialize AmanithVG.");
-        exit(EXIT_FAILURE);
-    }
-
-    // init tutorial application
-    tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-
-    // create a display link capable of being used with all active displays
-    CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
-    
-    // set the renderer output callback function
-    CVDisplayLinkSetOutputCallback(displayLink, &displayLinkCallback, (__bridge void*)self);
-    
-    // set the display link for the current renderer
-    CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
-    CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
-    CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(displayLink, cglContext, cglPixelFormat);
-    
-    // activate the display link
-    CVDisplayLinkStart(displayLink);
-
-    // start frame counter
-    time0 = [self getTimeMS];
-    framesCounter = 0;
-}
-
-- (void) drawRect :(NSRect)dirtyRect {
-
-    (void)dirtyRect;
-
-    if ([self lockFocusIfCanDraw]) {
-    
-        [[self openGLContext] makeCurrentContext];
-
-        // we draw on a secondary thread through the display link when resizing the view, -reshape is called automatically on the main thread
-        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
-        CGLLockContext([[self openGLContext] CGLContextObj]);
-
-        // draw OpenVG content
-        tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-    #ifdef AM_SRE
-        // blit AmanithVG SRE drawing surface, using a texture
-        [self blitTextureDraw];
-    #endif
-
-        // copy a double-buffered context’s back buffer to its front buffer
-        CGLFlushDrawable([[self openGLContext] CGLContextObj]);
-
-        // acknowledge AmanithVG that we have performed a swapbuffers
-        vgPostSwapBuffersMZT();
-
-        // unlock the context
-        CGLUnlockContext([[self openGLContext] CGLContextObj]);
-        [self unlockFocus];
-
-        // advance the frames counter
-        framesCounter++;
-    }
-}
-
-// this method is called whenever the window/control is reshaped, it is also called when the control is first opened
-- (void) reshape {
-
-    [super reshape];
-
-    if ([self lockFocusIfCanDraw]) {
-
-        [[self openGLContext] makeCurrentContext];
-
-        // we draw on a secondary thread through the display link, however, when resizing the view, -drawRect is called on the main thread
-        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
-        CGLLockContext([[self openGLContext] CGLContextObj]);
-
-        // get new dimensions
-        NSSize bound = [self frame].size;
-        
-        // resize AmanithVG drawing surface
-        vgPrivSurfaceResizeMZT(vgWindowSurface, (VGint)bound.width, (VGint)bound.height);
-        VGint surfaceWidth = [self openvgSurfaceWidthGet];
-        VGint surfaceHeight = [self openvgSurfaceHeightGet];
-        tutorialResize(surfaceWidth, surfaceHeight);
-
-    #ifdef AM_SRE
-        // resize OpenGL viewport
-        glViewport(0, 0, (GLsizei)bound.width, (GLsizei)bound.height);
-        // resize the OpenGL texture used to blit AmanithVG SRE drawing surface
-        [self blitTextureResize :surfaceWidth :surfaceHeight];
-    #endif
-
-        // unlock the context
-        CGLUnlockContext([[self openGLContext] CGLContextObj]);
-        [self unlockFocus];
-    }
-}
-
 - (void) dealloc {
 
+#ifdef AM_SRE
+    // destroy used textures
+    [self blitTextureDestroy];
+    // destroy Metal command queue
+    [mtlCommandQueue release];
+    mtlCommandQueue = nil;
+#else
     // stop the display link BEFORE releasing anything in the view
     // otherwise the display link thread may call into the view and crash
     // when it encounters something that has been release
     CVDisplayLinkStop(displayLink);
-
     // release the display link
     CVDisplayLinkRelease(displayLink);
-
+#endif
     // destroy OpenVG resources created by the tutorial
     tutorialDestroy();
-
-#ifdef AM_SRE
-    // destroy texture used to blit AmanithVG SRE surface
-    [self blitTextureDestroy];
-#endif
     // destroy OpenVG context and surface
     [self openvgDestroy];
-
     [super dealloc];
 }
 
@@ -582,7 +646,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseLeftButtonDown(p.x, p.y);
 }
 
@@ -592,7 +657,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseLeftButtonUp(p.x, p.y);
 }
 
@@ -602,7 +668,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseMove(p.x, p.y);
 }
 
@@ -612,7 +679,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseRightButtonDown(p.x, p.y);
 }
 
@@ -622,7 +690,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseRightButtonUp(p.x, p.y);
 }
 
@@ -632,7 +701,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     // convert window location into view location
     p = [theEvent locationInWindow];
-    p = [self convertPoint: p fromView: nil];
+    p = [self convertPoint:p fromView:nil];
+    p = [self convertPointToBacking:p];
     mouseMove(p.x, p.y);
 }
 
@@ -718,10 +788,14 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     (void)note;
 
+#ifdef AM_SRE
+    // nothing to do
+#else
     // Stop the display link when the window is closing because default
     // OpenGL render buffers will be destroyed. If display link continues to
     // fire without renderbuffers, OpenGL draw calls will set errors.
     CVDisplayLinkStop(displayLink);
+#endif
     done = VG_TRUE;
 }
 
@@ -767,7 +841,11 @@ int main(int argc, char *argv[]) {
 
     @autoreleasepool {
 
+        NSScreen* screen = [NSScreen mainScreen];
         NSRect frame = NSMakeRect(0, 0, INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
+
+        // take care of Retina display
+        frame = [screen convertRectFromBacking :frame];
 
         // get application
         NSApplication* app = [NSApplication sharedApplication];
@@ -778,14 +856,23 @@ int main(int argc, char *argv[]) {
         [window setAcceptsMouseMovedEvents:YES];
         [window setTitle: @ WINDOW_TITLE];
 
+    #ifdef AM_SRE
+        // create the Metal view
+        id<MTLDevice> mtlDevice = MTLCreateSystemDefaultDevice();
+        TutorialView* view = [[TutorialView alloc] initWithFrame:frame device:mtlDevice];
+    #else
         // create the OpenGL view
-        TutorialView* view = [[TutorialView alloc] initWithFrame: frame];
+        TutorialView* view = [[TutorialView alloc] initWithFrame:frame];
+    #endif
 
         // link the view to the window
         [window setDelegate: view];
         [window setContentView: view];
         [window makeFirstResponder: view];
-        [window setMaxSize: NSMakeSize([view openvgSurfaceMaxDimensionGet], [view openvgSurfaceMaxDimensionGet])];
+        // do not allow a content size bigger than the maximum surface dimension that AmanithVG can handle
+        NSRect maxRect = NSMakeRect(0.0f, 0.0f, [view openvgSurfaceMaxDimensionGet], [view openvgSurfaceMaxDimensionGet]);
+        maxRect = [screen convertRectFromBacking :maxRect];
+        [window setContentMaxSize: maxRect.size];
         [view release];
 
         // center the window

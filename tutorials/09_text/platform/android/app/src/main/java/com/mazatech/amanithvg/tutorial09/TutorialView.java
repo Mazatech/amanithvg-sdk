@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **

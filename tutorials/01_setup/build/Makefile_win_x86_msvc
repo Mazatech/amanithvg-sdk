@@ -1,0 +1,60 @@
+APP_NAME               = tutorial_01.exe
+!IFDEF SRE
+# AmanithVG SRE
+APP_DEST_DIR           = ..\..\..\bin\win\x86\sre\standalone
+VG_LIB_DIR             = ..\..\..\lib\win\x86\sre\standalone
+CFLAGS                 = /D "AM_SRE"
+!ELSE
+# AmanithVG GLE
+APP_DEST_DIR           = ..\..\..\bin\win\x86\gle\standalone
+VG_LIB_DIR             = ..\..\..\lib\win\x86\gle\standalone
+CFLAGS                 = /D "AM_GLE"
+!ENDIF
+# OpenVG headers (vgplatform.h, openvg.h, vgu.h, vgext.h)
+VG_INC_DIR             = ..\..\..\include
+VG_LIB_NAME            = libAmanithVG
+# Source directories for the tutorial
+PLATFORM_SRC_DIR       = ..\platform\win
+SRC_DIR                = ..\src
+# AmanithVG configuration file
+AMANITHVG_CFG          = ..\..\..\cfgfile\amanithvg.ini
+# Compiler and linker
+CC                     = cl
+CFLAGS				   = $(CFLAGS) \
+						 /W3 /nologo /c /O2 /Ob2 /Ot /Oy /MD /GS- /D "WIN32" /D "NDEBUG" /D "_WINDOWS"
+INCPATH                = /I "$(VG_INC_DIR)" /I"$(PLATFORM_SRC_DIR)" /I"$(SRC_DIR)"
+LINK                   = link
+LFLAGS                 = /INCREMENTAL:NO /NOLOGO /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /MACHINE:X86 /MANIFEST:NO
+LIBS                   = kernel32.lib user32.lib gdi32.lib opengl32.lib $(VG_LIB_DIR)\$(VG_LIB_NAME).lib tutorial.res
+# File commands
+DEL_FILE               = del /F
+COPY_FILE              = xcopy /Y
+MKDIR                  = mkdir
+# Objects to build
+TARGET                 = $(APP_NAME)
+OBJECTS                = main.obj tutorial_01.obj
+
+first: all
+
+all: distclean $(TARGET) clean
+
+$(TARGET): $(OBJECTS)
+	rc /fo"tutorial.res" $(PLATFORM_SRC_DIR)\tutorial.rc
+	$(LINK) $(LFLAGS) /OUT:$(APP_DEST_DIR)\$(TARGET) $(OBJECTS) $(LIBS)
+	$(DEL_FILE) $(OBJECTS)
+	$(DEL_FILE) tutorial.res
+	$(COPY_FILE) $(VG_LIB_DIR)\$(VG_LIB_NAME).dll $(APP_DEST_DIR)
+	$(COPY_FILE) $(AMANITHVG_CFG) $(APP_DEST_DIR)
+
+clean:
+	$(DEL_FILE) $(OBJECTS)
+	$(DEL_FILE) tutorial.res
+
+distclean: clean
+	$(DEL_FILE) $(APP_DEST_DIR)\$(TARGET)
+
+main.obj:
+	$(CC) $(CFLAGS) $(INCPATH) $(PLATFORM_SRC_DIR)\main.c
+
+tutorial_01.obj:
+	$(CC) $(CFLAGS) $(INCPATH) $(SRC_DIR)\tutorial_01.c

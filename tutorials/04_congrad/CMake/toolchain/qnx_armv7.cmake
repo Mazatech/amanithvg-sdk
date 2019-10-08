@@ -2,8 +2,8 @@
 set(CMAKE_SYSTEM_NAME QNX)
 set(CMAKE_SYSTEM_VERSION 6.6)
 # the 2 following variables are used internally by building scripts (i.e. not related to CMake variables)
-set(OS_QNX true CACHE string "QNX operating system (used internally, not related to CMake variables)")
-set(ARCH_ARMV7 true CACHE string "armv7 architecture (used internally, not related to CMake variables)")
+set(OS_QNX true CACHE STRING "QNX operating system (used internally, not related to CMake variables)")
+set(ARCH_ARMV7 true CACHE STRING "armv7 architecture (used internally, not related to CMake variables)")
 
 if (NOT DEFINED ENV{QNX_HOST})
     message(FATAL_ERROR "\nQNX_HOST environment variable is not set! Did you set QNX environment variables? (e.g. source /usr/qnx660/qnx660-env.sh)\n")
@@ -34,4 +34,4 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 set(CMAKE_IGNORE_PATH /usr/lib/x86_64-linux-gnu/ /usr/lib/x86_64-linux-gnu/lib/)
 
-set(CC_NO_UNINITIALIZED_WARNING "-Wno-uninitialized" CACHE string "No uninitialized variable warning for QNX armv7 compiler")
+set(CC_NO_UNINITIALIZED_WARNING "-Wno-uninitialized" CACHE STRING "No uninitialized variable warning for QNX armv7 compiler")

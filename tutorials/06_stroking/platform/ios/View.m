@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -14,9 +14,46 @@
 **
 ****************************************************************************/
 #import "View.h"
+#ifdef AM_SRE
+    // header shared between C code here, which executes Metal API commands, and .metal files, which uses these types as inputs to the shaders.
+    #import "ShaderTypes.h"
+#endif
 #include <math.h>
 
 @implementation View
+
+#ifdef AM_SRE
+
+- (VGboolean) metalInit {
+
+    VGboolean ok = VG_TRUE;
+    __autoreleasing NSError* error = nil;
+
+    self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+    self.framebufferOnly = YES;
+    self.autoResizeDrawable = YES;
+    self.clearColor = MTLClearColorMake(1.0, 1.0, 1.0, 1.0);
+    // keep track of Metal command queue
+    mtlCommandQueue = [[self device] newCommandQueue];
+    mtlLibrary = [[self device] newDefaultLibrary];
+
+    // configure a pipeline descriptor that is used to blit AmanithVG SRE surface
+    id<MTLFunction> surfaceVertexFunction = [mtlLibrary newFunctionWithName:@"texturedVertexShader"];
+    id<MTLFunction> surfaceFragmentFunction = [mtlLibrary newFunctionWithName:@"texturedFragmentShader"];
+    MTLRenderPipelineDescriptor* surfacePipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    surfacePipelineStateDescriptor.label = @"Draw surface texture pipeline";
+    surfacePipelineStateDescriptor.vertexFunction = surfaceVertexFunction;
+    surfacePipelineStateDescriptor.fragmentFunction = surfaceFragmentFunction;
+    surfacePipelineStateDescriptor.colorAttachments[0].pixelFormat = [self colorPixelFormat];
+    mtlSurfacePipelineState = [[self device] newRenderPipelineStateWithDescriptor:surfacePipelineStateDescriptor error:&error];
+    if (!mtlSurfacePipelineState) {
+        NSLog(@"metalInit: failed to create surface pipeline state: %@", error);
+        ok = VG_FALSE;
+    }
+    return ok;
+}
+
+#else
 
 /*****************************************************************
                                EGL
@@ -32,9 +69,9 @@
 
     if ([[UIScreen mainScreen] respondsToSelector:@selector(displayLinkWithTarget:selector:)]) {
         // take care of Retina display
-        if ([UIScreen mainScreen].scale > 0.0f) {
-            self.contentScaleFactor = [UIScreen mainScreen].scale;
-            eaglLayer.contentsScale = [UIScreen mainScreen].scale;
+        if ([UIScreen mainScreen].nativeScale > 0.0f) {
+            self.contentScaleFactor = [UIScreen mainScreen].nativeScale;
+            eaglLayer.contentsScale = [UIScreen mainScreen].nativeScale;
         }
     }
 }
@@ -44,12 +81,12 @@
     // OpenGL ES 1.1 context
     eaglContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES1];
     if (!eaglContext) {
-        NSLog(@"Failed to initialize OpenGL ES 1.1 context");
+        NSLog(@"eaglContextSetup: failed to initialize OpenGL ES 1.1 context");
         return VG_FALSE;
     }
     
     if (![EAGLContext setCurrentContext:eaglContext]) {
-        NSLog(@"Failed to set current OpenGL context");
+        NSLog(@"eaglContextSetup: failed to set current OpenGL context");
         return VG_FALSE;
     }
 
@@ -64,29 +101,6 @@
     GLint width, height;
     GLenum status;
 
-#ifdef AM_SRE
-    // generate framebuffer object
-    glGenFramebuffersOES(1, &frameBuffer);
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
-    // create and attach color buffer
-    glGenRenderbuffersOES(1, &colorRenderBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
-    [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:eaglLayer];
-    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, colorRenderBuffer);
-    // retrieve the height and width of the color renderbuffer (see https://developer.apple.com/library/ios/documentation/3ddrawing/conceptual/opengles_programmingguide/WorkingwithEAGLContexts/WorkingwithEAGLContexts.html)
-    // "Here, the code retrieves the width and height from the color renderbuffer after its storage is allocated.
-    // Your app does this because the actual dimensions of the color renderbuffer are calculated based on the layer's bounds and scale factor.
-    // Other renderbuffers attached to the framebuffer must have the same dimensions. In addition to using the height and width to allocate
-    // the depth buffer, use them to assign the OpenGL ES viewport and to help determine the level of detail required in your app’s textures and models"
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &width);
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &height);
-    // final checkup
-    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
-    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"glesFrameBufferCreate: failed to build a complete framebuffer object; status code: %x", status);
-        return VG_FALSE;
-    }
-#else
     // resolved framebuffer
     glGenFramebuffersOES(1, &resolvedFrameBuffer);
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, resolvedFrameBuffer);
@@ -121,11 +135,11 @@
     // final checkup
     status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
     if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"Failed to build a complete multi-sampled framebuffer object; status code: %x", status);
+        NSLog(@"glesFrameBufferCreate: failed to build a complete multi-sampled framebuffer object; status code: %x", status);
         return VG_FALSE;
     }
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
-#endif
+
     // set viewport
     glViewport(0, 0, width, height);
     // keep track of color buffer dimensions
@@ -136,16 +150,6 @@
 
 - (void) glesFrameBufferDestroy {
 
-#ifdef AM_SRE
-    if (frameBuffer) {
-        glDeleteFramebuffersOES(1, &frameBuffer);
-        frameBuffer = 0;
-    }
-    if (colorRenderBuffer) {
-        glDeleteRenderbuffersOES(1, &colorRenderBuffer);
-        colorRenderBuffer = 0;
-    }
-#else
     if (resolvedFrameBuffer) {
         glDeleteFramebuffersOES(1, &resolvedFrameBuffer);
         resolvedFrameBuffer = 0;
@@ -166,10 +170,7 @@
         glDeleteRenderbuffersOES(1, &sampledDepthRenderBuffer);
         sampledDepthRenderBuffer = 0;
     }
-#endif
 }
-
-#ifdef AM_SRE
 
 - (void) glesInit {
 
@@ -191,7 +192,7 @@
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-#endif
+#endif  // AM_SRE
 
 /*****************************************************************
                             OpenVG
@@ -252,82 +253,126 @@
 
 #ifdef AM_SRE
 
-- (void) blitTextureGenerate {
+// get access to OpenVG drawing surface pixels
+- (const void*) openvgSurfacePixelsGet {
 
-    // get AmanithVG SRE surface pixels pointer
-    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
-
-    // generate a 2D rectangular texture
-    glGenTextures(1, &blitTexture);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, blitTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    // select best format (BGRA), in order to avoid swizzling
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, [self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet], 0, GL_BGRA, GL_UNSIGNED_BYTE, surfacePixels);
+    return vgPrivGetSurfacePixelsMZT(vgWindowSurface);
 }
 
 - (void) blitTextureResize :(const VGuint)width :(const VGuint)height {
 
-    // resize the OpenGL texture used to blit AmanithVG SRE drawing surface
-    glBindTexture(GL_TEXTURE_2D, blitTexture);
-    // select best format (BGRA), in order to avoid swizzling
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, vgPrivGetSurfacePixelsMZT(vgWindowSurface));
+    [self blitTextureDestroy];
+    // set texture dimensions, in pixels
+    blitTextureDescriptor.width = width;
+    blitTextureDescriptor.height = height;
+    // create the texture from the device by using the descriptor
+    blitTexture = [[self device] newTextureWithDescriptor:blitTextureDescriptor];
+}
+
+- (void) blitTextureGenerate {
+
+    blitTextureDescriptor = [[MTLTextureDescriptor alloc] init];
+    // indicate that each pixel has a blue, green, red, and alpha channel, where each channel is
+    // an 8-bit unsigned normalized value (i.e. 0 maps to 0.0 and 255 maps to 1.0)
+    blitTextureDescriptor.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    [self blitTextureResize :[self openvgSurfaceWidthGet] :[self openvgSurfaceHeightGet]];
 }
 
 - (void) blitTextureDestroy {
 
-    if (blitTexture != 0) {
-        glDeleteTextures(1, &blitTexture);
+    if (blitTexture != nil) {
+        [blitTexture setPurgeableState:MTLPurgeableStateEmpty];
+        [blitTexture release];
+        blitTexture = nil;
     }
 }
 
 - (void) blitTextureDraw {
 
-    // get AmanithVG surface dimensions and pixels pointer
-    VGint surfaceWidth = [self openvgSurfaceWidthGet];
-    VGint surfaceHeight = [self openvgSurfaceHeightGet];
-    void* surfacePixels = (void*)vgPrivGetSurfacePixelsMZT(vgWindowSurface);
-    const VGfloat w = (VGfloat)surfaceWidth / (VGfloat)colorRenderBufferWidth;
-    const VGfloat h = (VGfloat)surfaceHeight / (VGfloat)colorRenderBufferHeight;
-    // 4 vertices
-    const GLfloat xy[] = {
-        -1.0f, -1.0f,
-        -1.0f + (w * 2.0f), -1.0f,
-        -1.0f, -1.0f + (h * 2.0f),
-        -1.0f + (w * 2.0f), -1.0f + (h * 2.0f)
-    };
-    static const GLfloat uv[] = {
-        0.0f, 1.0f,
-        1.0f, 1.0f,
-        0.0f, 0.0f,
-        1.0f, 0.0f
-    };
-    
-    glClear(GL_COLOR_BUFFER_BIT);
-    // simply put a quad, covering the whole window
-    glBindTexture(GL_TEXTURE_2D, blitTexture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, surfaceWidth, surfaceHeight, GL_BGRA, GL_UNSIGNED_BYTE, surfacePixels);
-    glEnable(GL_TEXTURE_2D);
-    glVertexPointer(2, GL_FLOAT, 0, xy);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, uv);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    id<MTLCommandBuffer> commandBuffer = [mtlCommandQueue commandBuffer];
+    // obtain a render pass descriptor generated from the view's drawable textures
+    MTLRenderPassDescriptor* passDescriptor = [self currentRenderPassDescriptor];
+
+    if (passDescriptor != nil) {
+
+        vector_uint2 viewportSize;
+        id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
+        // get AmanithVG surface dimensions and pixels pointer
+        VGint surfaceWidth = [self openvgSurfaceWidthGet];
+        VGint surfaceHeight = [self openvgSurfaceHeightGet];
+        const void* surfacePixels = [self openvgSurfacePixelsGet];
+        // triangle strip
+        const TexturedVertex rectVertices[4] = {
+            // pixel positions                 texture coordinates
+            { { 0.0f, 0.0f },                  { 0.0f, 1.0f } },
+            { { surfaceWidth, 0.0f },          { 1.0f, 1.0f } },
+            { { 0.0f, surfaceHeight },         { 0.0f, 0.0f } },
+            { { surfaceWidth, surfaceHeight }, { 1.0f, 0.0f } }
+        };
+        MTLRegion region = {
+            { 0, 0, 0 },                        // MTLOrigin
+            { surfaceWidth, surfaceHeight, 1 }  // MTLSize
+        };
+
+        // upload AmanithVG surface pixels onto the texture
+        [blitTexture replaceRegion:region mipmapLevel:0 withBytes:surfacePixels bytesPerRow:surfaceWidth*4];
+
+        // set the region of the drawable to draw into
+        [commandEncoder setViewport:(MTLViewport){ 0.0, 0.0, colorRenderBufferWidth, colorRenderBufferHeight, 0.0, 1.0 }];
+        [commandEncoder setRenderPipelineState:mtlSurfacePipelineState];
+        [commandEncoder setFragmentTexture:blitTexture atIndex:0];
+        // put the texture
+        viewportSize.x = colorRenderBufferWidth;
+        viewportSize.y = colorRenderBufferHeight;
+        [commandEncoder setVertexBytes:rectVertices length:sizeof(rectVertices) atIndex:0];
+        [commandEncoder setVertexBytes:&viewportSize length:sizeof(viewportSize) atIndex:1];
+        [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+        // we have finished
+        [commandEncoder endEncoding];
+        [commandBuffer presentDrawable:[self currentDrawable]];
+    }
+
+    // finalize rendering and push the command buffer to the GPU
+    [commandBuffer commit];
+    // acknowledge AmanithVG that we have performed a swapbuffers
+    vgPostSwapBuffersMZT();
 }
 
-#endif // AM_SRE
+// called whenever view changes orientation or layout is changed; NB: this method is NOT called when the view/window is first opened
+- (void) mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
 
-- (void) render :(CADisplayLink*)displayLink {
+    VGint surfaceWidth, surfaceHeight;
 
-#ifdef AM_SRE
+    (void)view;
+    // save the size of the drawable to pass to the vertex shader
+    colorRenderBufferWidth = size.width;
+    colorRenderBufferHeight = size.height;
+
+    // resize AmanithVG surface
+    vgPrivSurfaceResizeMZT(vgWindowSurface, colorRenderBufferWidth, colorRenderBufferHeight);
+    surfaceWidth = [self openvgSurfaceWidthGet];
+    surfaceHeight = [self openvgSurfaceHeightGet];
+    [self blitTextureResize :surfaceWidth :surfaceHeight];
+
+    // inform tutorial that surface has been resized
+    tutorialResize(surfaceWidth, surfaceHeight);
+}
+
+// MTKView by default has its own loop continuously calling the delegate's drawInMTKView method
+- (void) drawInMTKView :(nonnull MTKView *)view {
+
+    (void)view;
+
     // draw OpenVG content
     tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
     // blit AmanithVG drawing surface, using a texture
     [self blitTextureDraw];
+}
+
 #else
+
+- (void) render :(CADisplayLink*)displayLink {
+
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
     // draw OpenVG content
     tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
@@ -336,8 +381,6 @@
     glBindFramebufferOES(GL_READ_FRAMEBUFFER_APPLE, sampledFrameBuffer);
     glResolveMultisampleFramebufferAPPLE();
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
-#endif
-
     // present color buffer
     [eaglContext presentRenderbuffer:GL_RENDERBUFFER_OES];
     // acknowledge AmanithVG that we have performed a swapbuffers
@@ -348,21 +391,7 @@
 
     GLenum status;
     GLint glWidth, glHeight;
-    VGint vgWidth, vgHeight;
 
-#ifdef AM_SRE
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
-    [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:layer];
-    // retrieve the height and width of the color renderbuffer
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &glWidth);
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &glHeight);
-    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
-    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"resizeFromLayer: failed to resize the framebuffer object; status code: %x", status);
-        return VG_FALSE;
-    }
-#else
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, resolvedFrameBuffer);
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
     [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:layer];
@@ -389,21 +418,12 @@
         return VG_FALSE;
     }
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
-#endif
 
     // resize AmanithVG surface
     vgPrivSurfaceResizeMZT(vgWindowSurface, glWidth, glHeight);
-    vgWidth = [self openvgSurfaceWidthGet];
-    vgHeight = [self openvgSurfaceHeightGet];
-#ifdef AM_SRE
-    [self blitTextureResize :vgWidth :vgHeight];
-#endif    
-
     // inform tutorial that surface has been resized
-    tutorialResize(vgWidth, vgHeight);
+    tutorialResize([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
 
-    // set viewport
-    glViewport(0, 0, glWidth, glHeight);
     // keep track of color buffer dimensions
     colorRenderBufferWidth = glWidth;
     colorRenderBufferHeight = glHeight;
@@ -435,6 +455,8 @@
     [displayLink invalidate];
 }
 
+#endif // AM_SRE
+
 - (void) gesturesSetup {
 
     // pan gesture
@@ -464,20 +486,20 @@
 - (void) move :(id)sender {
 
     CGPoint translatedPoint = [(UIPanGestureRecognizer*)sender locationInView:self];
-    translatedPoint.x *= [[UIScreen mainScreen] scale];
-    translatedPoint.y *= [[UIScreen mainScreen] scale];
- 
+    translatedPoint.x *= [[UIScreen mainScreen] nativeScale];
+    translatedPoint.y *= [[UIScreen mainScreen] nativeScale];
+
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateBegan) {
-        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        // we must apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         mouseLeftButtonDown((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
     else
     if ([(UIPanGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
-        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        // we must apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         mouseLeftButtonUp((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
     else {
-        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        // we must apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         mouseMove((VGint)translatedPoint.x, colorRenderBufferHeight - (VGint)translatedPoint.y);
     }
 }
@@ -501,7 +523,6 @@
     }
     else {
         VGfloat rotation = [(UIRotationGestureRecognizer*)sender rotation];
-        //touchRotate(-35.0f * (rot - lastRotation));
         touchRotate(-(rotation - lastRotation));
         lastRotation = rotation;
     }
@@ -511,85 +532,85 @@
 
     if ([(UITapGestureRecognizer*)sender state] == UIGestureRecognizerStateEnded) {
         CGPoint tapPoint = [(UIGestureRecognizer*)sender locationInView:self];
-        tapPoint.x *= [[UIScreen mainScreen] scale];
-        tapPoint.y *= [[UIScreen mainScreen] scale];
-        // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
+        tapPoint.x *= [[UIScreen mainScreen] nativeScale];
+        tapPoint.y *= [[UIScreen mainScreen] nativeScale];
+        // we must apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         touchDoubleTap((VGint)tapPoint.x, colorRenderBufferHeight - (VGint)tapPoint.y);
     }
 }
 
-- (id) initWithFrame :(CGRect)frame {
+- (void) initView {
+
+    VGboolean ok;
 
     vgInitialized = VG_FALSE;
-    self = [super initWithFrame:frame];
+#ifdef AM_SRE
+    ok = [self metalInit];
+    colorRenderBufferWidth = [self drawableSize].width;
+    colorRenderBufferHeight = [self drawableSize].height;
+#else
+    ok = VG_FALSE;
+    // setup EAGL layer
+    [self eaglLayerSetup];
+    // setup EAGL context
+    if ([self eaglContextSetup]) {
+        // setup framebuffer
+        ok = [self glesFrameBufferCreate];
+    }
+#endif
 
-    if (self) {
-        // setup EAGL layer
-        [self eaglLayerSetup];
-        // setup EAGL context
-        if ([self eaglContextSetup]) {
-            // setup framebuffer
-            if ([self glesFrameBufferCreate]) {
-                // setup gestures
-                [self setMultipleTouchEnabled:YES];
-                [self gesturesSetup];
-                // init OpenVG
-                if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
-                #ifdef AM_SRE
-                    // set basic OpenGL states and viewport
-                    [self glesInit];
-                    // generate OpenGL ES texture used to blit the AmanithVG SRE surface
-                    [self blitTextureGenerate];
-                #endif
-                    // init tutorial application (OpenVG related code)
-                    tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-                }
-                else {
-                    NSLog(@"Unable to initialize AmanithVG");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else {
-                exit(EXIT_FAILURE);
-            }
+    if (ok) {
+        // setup gestures
+        [self setMultipleTouchEnabled:YES];
+        [self gesturesSetup];
+        // init OpenVG
+        if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
+            // init tutorial application (OpenVG related code)
+            tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+        #ifdef AM_SRE
+            // generate Metal texture used to blit the AmanithVG SRE surface
+            [self blitTextureGenerate];
+        #else
+            // create and activate the display link (i.e. render loop)
+            [self displayLinkCreate];
+            [self displayLinkStart];
+        #endif
         }
         else {
+            NSLog(@"initView: unable to initialize AmanithVG");
             exit(EXIT_FAILURE);
         }
-
-        // create and activate the display link (i.e. render loop)
-        [self displayLinkCreate];
-        [self displayLinkStart];
     }
-
-    return self;
+    else {
+        exit(EXIT_FAILURE);
+    }
 }
 
 - (void) dealloc {
 
+#ifdef AM_SRE
+    // destroy OpenVG resources created by the tutorial
+    tutorialDestroy();
+    // destroy texture used to blit AmanithVG SRE surface
+    [self blitTextureDestroy];
+    // destroy OpenVG context and surface
+    [self openvgDestroy];
+#else
     // stop the display link BEFORE releasing anything in the view
     [self displayLinkStop];
     displayLink = nil;
-
     // destroy OpenVG resources created by the tutorial
     tutorialDestroy();
-
-#ifdef AM_SRE
-    // destroy texture used to blit AmanithVG SRE surface
-    [self blitTextureDestroy];
-#endif
-
     // destroy OpenVG context and surface
     [self openvgDestroy];
-
     // destroy OpenGL ES buffers
     [self glesFrameBufferDestroy];
-
     // unbind OpenGL context
     if ([EAGLContext currentContext] == eaglContext) {
         [EAGLContext setCurrentContext:nil];
     }
     eaglContext = nil;
+#endif
 
     [super dealloc];
 }

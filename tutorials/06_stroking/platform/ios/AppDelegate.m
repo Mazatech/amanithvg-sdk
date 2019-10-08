@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -14,21 +14,11 @@
 **
 ****************************************************************************/
 #import "AppDelegate.h"
-#import "ViewController.h"
 
 @implementation AppDelegate
 
-@synthesize window = _window;
-
 - (BOOL) application :(UIApplication *)application didFinishLaunchingWithOptions :(NSDictionary *)launchOptions {
-    
-    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    self.window.backgroundColor = [UIColor whiteColor];
-    
-    ViewController* viewController = [[ViewController alloc] init];
-    self.window.rootViewController = viewController;
-    
-    [self.window makeKeyAndVisible];
+
     return YES;
 }
 
@@ -58,12 +48,6 @@
 - (void) applicationWillTerminate :(UIApplication *)application {
     
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
-}
-
-- (void) dealloc {
-
-    [self.window release];
-    [super dealloc];
 }
 
 @end

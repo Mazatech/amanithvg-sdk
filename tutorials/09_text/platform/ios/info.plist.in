@@ -62,6 +62,14 @@
     <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSRequiresAquaSystemAppearance</key>
+    <string>False</string>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIMainStoryboardFile</key>
+    <string>Main</string>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
         <!-- Include this key if your app or embedded bundle (i.e. extension, framework) is compiled only for the arm64 instruction set. Include this key for all 64-bit apps and embedded bundles. -->

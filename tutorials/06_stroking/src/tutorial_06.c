@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2017 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -60,6 +60,7 @@ static VGPaint solidCol = VG_INVALID_HANDLE;
 // current stroke configuration
 static VGint dashPattern = 0;
 static VGfloat dashPhase = 0.0f;
+static VGfloat dashPhaseInc = 0.08f;
 static VGboolean dashAnimate = VG_FALSE;
 static VGJoinStyle joinStyle = VG_JOIN_MITER;
 static VGCapStyle startCapStyle = VG_CAP_ROUND;
@@ -297,7 +298,7 @@ void tutorialDraw(const VGint surfaceWidth,
 
     // animate dash phase, if needed
     if (dashAnimate && (dashPattern != 0)) {
-        dashPhase += 0.01f;
+        dashPhase += dashPhaseInc;
         if (dashPhase >= 110.0f) {
             dashPhase = 0.0f;
         }
@@ -352,6 +353,12 @@ void tutorialDraw(const VGint surfaceWidth,
         // draw a single control point
         vgDrawPath(controlPoint, VG_STROKE_PATH);
     }
+}
+
+void tutorialSpeedAdjust(const VGint fps) {
+
+    // 10 path length units every second (suppose at least 10 fps, else we'll get too bigger steps)
+    dashPhaseInc = (fps > 10.0f) ? (10.0f / ((VGfloat)fps + 1.0f)) : 1.0f;
 }
 
 /*****************************************************************
