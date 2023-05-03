@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -25,6 +25,7 @@ import static javax.microedition.khronos.openvg.VG101.*;
 import static javax.microedition.khronos.openvg.VG11Ext.*;
 
 import android.opengl.GLSurfaceView;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.view.MotionEvent;
 import android.view.GestureDetector;
@@ -42,34 +43,37 @@ import javax.microedition.khronos.egl.EGLDisplay;
 import javax.microedition.khronos.opengles.GL10;
 import javax.microedition.khronos.opengles.GL11;
 import javax.microedition.khronos.openvg.AmanithVG;
+import javax.microedition.khronos.openvg.AmanithVG.VGConfigMzt;
 
 public class TutorialView extends GLSurfaceView implements GestureDetector.OnDoubleTapListener, GestureDetector.OnGestureListener {
 
-    public static final int TUTORIAL_CHANGE_BLEND_MODE_CMD = 0;
-    public static final int TUTORIAL_ABOUT_CMD = 1;
+    static final int TUTORIAL_NO_CMD = -1;
+    static final int TUTORIAL_CHANGE_BLEND_MODE_CMD = 0;
+    static final int TUTORIAL_ABOUT_CMD = 1;
 
+    // gesture recognizer
+    private final GestureDetector gestureDetector;
     // the host activity
     Context activity;
+
     // AmanithVG variables
     private AmanithVG vg;
     private long vgContext;
     private long vgSurface;
     // AmanithVG rendering backend, SRE or GLE (see resources -> values -> bools.xml)
-    private boolean sreBackend;
+    private final boolean sreBackend;
     // OpenGL texture used to blit the AmanithVG SRE surface
     int[] blitTexture;
-
     // OpenGL ES support of BGRA textures
     boolean bgraSupport;
     // OpenGL ES support of npot textures
     boolean npotSupport;
-
+    // a possible pending action triggered by a menu item click
+    int menuPendingAction;
     // the view renderer
     Renderer renderer;
     // the tutorial instance
     Tutorial tutorial;
-    // gesture recognizer
-    private GestureDetector gestureDetector;
 
     TutorialView(Context context) {
 
@@ -82,7 +86,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         // ask for a 32-bit surface with alpha
         getHolder().setFormat(PixelFormat.TRANSLUCENT);
         // setup the context factory for OpenGL ES 1.1 rendering
-        setEGLContextFactory(new ContextFactory());
+        setEGLContextFactory(new ContextFactory(this));
         // ask for 32bit RGBA, at least 8bit depth, 4 bit stencil
         if (sreBackend) {
             // AmanithVG SRE: ask for 32bit RGBA (we are not interested in depth, stencil nor aa samples)
@@ -106,20 +110,27 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         // request focus
         setFocusable(true);
         requestFocus();
+
+        blitTexture = new int[] { 0 };
+        menuPendingAction = TUTORIAL_NO_CMD;
     }
 
     // return the power of two value greater (or equal) to a specified value
     private int pow2Get(int value) {
 
-        int v = 1;
+        int result;
 
         if (value >= 0x40000000) {
-            return 0x40000000;
+            result = 0x40000000;
         }
-        while (v < value) {
-            v <<= 1;
+        else {
+            result = 1;
+            while (result < value) {
+                result <<= 1;
+            }
         }
-        return v;
+
+        return result;
     }
 
     private String blendModeStr(int blendMode) {
@@ -209,14 +220,22 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     }
 
     private void activityTitleUpdate() {
-        String appName = getResources().getString(R.string.app_name);
-        ((Activity)activity).setTitle(appName + " (" + blendModeStr(tutorial.getBlendMode()) + ")");
+
+        // make sure to run this code within the ui thread (sometimes this function is called
+        // from the GL renderering thread, so this precaution is necessary)
+        ((Activity)activity).runOnUiThread(new Runnable() {
+            public void run() {
+                final String appName = getResources().getString(R.string.app_name);
+                final String title = appName + " (" + blendModeStr(tutorial.getBlendMode()) + ")";
+                ((Activity)activity).setTitle(title);
+            }
+        });
     }
 
     /*****************************************************************
                                  OpenGL ES
     *****************************************************************/
-    private void glesInit(GL11 gl) {
+    private void glesInit(@NonNull GL11 gl) {
 
         String extensions = gl.glGetString(GL11.GL_EXTENSIONS);
 
@@ -247,8 +266,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
             gl.glViewport(0, 0, getWidth(), getHeight());
             gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-            blitTexture = new int[1];
-            blitTexture[0] = 0;
             // generate OpenGL ES texture used to blit the AmanithVG SRE surface
             gl.glGenTextures(1, blitTexture, 0);
             gl.glEnable(GL11.GL_TEXTURE_2D);
@@ -261,7 +278,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         }
     }
 
-    private FloatBuffer glesFloatBuffer(float[] arr) {
+    private @NonNull FloatBuffer glesFloatBuffer(@NonNull float[] arr) {
 
         ByteBuffer bb = ByteBuffer.allocateDirect(arr.length * 4);
         bb.order(ByteOrder.nativeOrder());
@@ -276,32 +293,58 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     *****************************************************************/
     private boolean openvgInit(GL11 gl) {
 
+        boolean ok;
+
         // create AmanithVG class
         vg = new AmanithVG();
 
-        // create an OpenVG context
-        vgContext = vg.vgPrivContextCreateMZT(0);
-        if (vgContext == 0) {
-            return false;
+        // initialize AmanithVG
+        vgContext = 0;
+        vgSurface = 0;
+        // set quality parameters (range is [0; 100], where 100 represents the best quality)
+        vg.vgConfigSetMZT(VGConfigMzt.CurvesQuality, 75.0f);
+        vg.vgConfigSetMZT(VGConfigMzt.RadialGrandientsQuality, 75.0f);
+        vg.vgConfigSetMZT(VGConfigMzt.ConicalGrandientsQuality, 75.0f);
+        // set other parameters, if desired, before to call vgInitializeMZT
+        ok = vg.vgInitializeMZT();
+
+        if (ok) {
+            // create an OpenVG context
+            vgContext = vg.vgPrivContextCreateMZT(0);
+            if (vgContext != 0) {
+                // create a window surface (sRGBA premultiplied color space)
+                vgSurface = vg.vgPrivSurfaceCreateMZT(getWidth(), getHeight(), false, true, true);
+                if (vgSurface != 0) {
+                    // bind context and surface
+                    ok = vg.vgPrivMakeCurrentMZT(vgContext, vgSurface);
+                }
+                else {
+                    // error when creating the drawing surface
+                    ok = false;
+                }
+            }
+            else {
+                // error when creating the context
+                ok = false;
+            }
         }
 
-        // create a window surface (sRGBA premultiplied color space)
-        vgSurface = vg.vgPrivSurfaceCreateMZT(getWidth(), getHeight(), false, true, true);
-        if (vgSurface == 0) {
-            vg.vgPrivContextDestroyMZT(vgContext);
-            return false;
+        // is something went wrong, release allocated OpenVG resources
+        if (!ok) {
+            if (vgSurface != 0) {
+                vg.vgPrivSurfaceDestroyMZT(vgSurface);
+            }
+            if (vgContext != 0) {
+                vg.vgPrivContextDestroyMZT(vgContext);
+            }
+            // terminate AmanithVG
+            vg.vgTerminateMZT();
+        }
+        else {
+            glesInit(gl);
         }
 
-        // bind context and surface
-        if (!vg.vgPrivMakeCurrentMZT(vgContext, vgSurface)) {
-            vg.vgPrivSurfaceDestroyMZT(vgSurface);
-            vg.vgPrivContextDestroyMZT(vgContext);
-            return false;
-        }
-
-        glesInit(gl);
-
-        return true;
+        return ok;
     }
 
     private void openvgResize(GL11 gl, int width, int height) {
@@ -325,6 +368,8 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         vg.vgPrivSurfaceDestroyMZT(vgSurface);
         // destroy OpenVG context
         vg.vgPrivContextDestroyMZT(vgContext);
+        // terminate AmanithVG
+        vg.vgTerminateMZT();
     }
 
     // get the width of OpenVG drawing surface, in pixels
@@ -348,7 +393,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     // get the maximum surface dimension supported by the OpenVG backend
     private int openvgSurfaceMaxDimensionGet() {
 
-        return vg.vgPrivSurfaceMaxDimensionGetMZT();
+        return (int)vg.vgConfigGetMZT(VGConfigMzt.MaxSurfaceDimension);
     }
 
     // get OpenVG surface pixels (a direct buffer that wraps the native AmanithVG heap memory)
@@ -366,12 +411,8 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         // init tutorial application (as a preferred image format, we pass the drawing surface
         // one, in order to speedup "read pixels" operations and rendering)
         tutorial.init(openvgSurfaceWidthGet(), openvgSurfaceHeightGet(), openvgSurfaceFormatGet());
-        // we are here from the GL renderer thread
-        ((Activity)activity).runOnUiThread(new Runnable() {
-            public void run() {
-                activityTitleUpdate();
-            }
-        });
+        // update title
+        activityTitleUpdate();
     }
 
     private void tutorialDestroy() {
@@ -403,27 +444,61 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         tutorial.resize(openvgSurfaceWidthGet(), openvgSurfaceHeightGet());
     }
 
-    boolean tutorialMenuOption(int option) {
+    private boolean tutorialMenuOptionConsumable(int option) {
 
-        boolean consumed = true;
+        boolean consumable;
 
         switch (option) {
 
             case TUTORIAL_CHANGE_BLEND_MODE_CMD:
-                tutorial.toggleBlendMode();
-                activityTitleUpdate();
-                break;
-
             case TUTORIAL_ABOUT_CMD:
-                aboutDialog();
+                consumable = true;
                 break;
 
             default:
-                consumed = false;
+                consumable = false;
                 break;
         }
 
-        return consumed;
+        return consumable;
+    }
+
+    private void tutorialMenuPendingActionPerform() {
+
+        switch (menuPendingAction) {
+
+            case TUTORIAL_CHANGE_BLEND_MODE_CMD:
+                tutorial.toggleBlendMode();
+                // update title
+                activityTitleUpdate();
+                break;
+
+            default:
+                // should be unreachable code
+                break;
+        }
+
+        // reset to "no actions required"
+        menuPendingAction = TUTORIAL_NO_CMD;
+    }
+
+    boolean tutorialMenuOption(int option) {
+
+        boolean consumable = tutorialMenuOptionConsumable(option);
+
+        if (consumable) {
+            // this can be consumed from the calling thread
+            if (option == TUTORIAL_ABOUT_CMD) {
+                aboutDialog();
+            }
+            else {
+                // all OpenVG related actions must be consumed within the rendering thread
+                // (i.e. the thread where OpenVG context and surfaces have been created)
+                menuPendingAction = option;
+            }
+        }
+
+        return consumable;
     }
 
     private void tutorialTouchDown(float x, float y) {
@@ -448,6 +523,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
         // we apply a flip on y direction in order to be consistent with the OpenVG coordinates system
         this.tutorial.touchDoubleTap(x, (float)getHeight() - y);
+        // update title
         activityTitleUpdate();
     }
 
@@ -470,7 +546,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         }
     }
 
-    private void blitTextureGenerate(GL11 gl) {
+    private void blitTextureGenerate(@NonNull GL11 gl) {
 
         int[] maxTextureSize = new int[1];
         // get AmanithVG surface dimensions
@@ -480,7 +556,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         // get maximum texture size
         gl.glGetIntegerv(GL11.GL_MAX_TEXTURE_SIZE, maxTextureSize, 0);
         if ((surfaceWidth <= maxTextureSize[0]) && (surfaceHeight <= maxTextureSize[0])) {
-            int format = (bgraSupport) ? GL_BGRA : GL11.GL_RGBA;
+            int format = bgraSupport ? GL_BGRA : GL11.GL_RGBA;
             int texWidth = npotSupport ? surfaceWidth : pow2Get(surfaceWidth);
             int texHeight = npotSupport ? surfaceHeight : pow2Get(surfaceHeight);
             // generate the OpenGL texture
@@ -541,7 +617,16 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
     private static class ContextFactory implements GLSurfaceView.EGLContextFactory {
 
-        public EGLContext createContext(EGL10 egl, EGLDisplay display, EGLConfig eglConfig) {
+        // the view that created this context factory
+        final private TutorialView view;
+
+        ContextFactory(TutorialView myView) {
+
+            // keep track of view
+            view = myView;
+        }
+
+        public EGLContext createContext(@NonNull EGL10 egl, EGLDisplay display, EGLConfig eglConfig) {
 
             int[] contextAttribs = {
                 EGL_CONTEXT_CLIENT_VERSION, 1,
@@ -550,7 +635,15 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
             return egl.eglCreateContext(display, eglConfig, EGL10.EGL_NO_CONTEXT, contextAttribs);
         }
 
-        public void destroyContext(EGL10 egl, EGLDisplay display, EGLContext context) {
+        public void destroyContext(@NonNull EGL10 egl, EGLDisplay display, EGLContext context) {
+
+            // NB: because GLSurfaceView.Renderer has no 'onSurfaceDestroyed' event, this is the only
+            // possible place to intercept rendering termination within the rendering thread
+
+            // destroy OpenVG resources created by the tutorial
+            view.tutorialDestroy();
+            // destroy OpenVG context and surface
+            view.openvgDestroy();
 
             egl.eglDestroyContext(display, context);
         }
@@ -570,7 +663,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
             aaSamples = samples;
         }
 
-        private int findConfigAttrib(EGL10 egl, EGLDisplay display, EGLConfig config, int attribute, int defaultValue) {
+        private int findConfigAttrib(@NonNull EGL10 egl, EGLDisplay display, EGLConfig config, int attribute, int defaultValue) {
 
             if (egl.eglGetConfigAttrib(display, config, attribute, tmpValue)) {
                 return tmpValue[0];
@@ -578,7 +671,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
             return defaultValue;
         }
 
-        private EGLConfig chooseConfigImpl(EGL10 egl, EGLDisplay display, EGLConfig[] configs) {
+        private EGLConfig chooseConfigImpl(@NonNull EGL10 egl, EGLDisplay display, @NonNull EGLConfig[] configs) {
 
             EGLConfig result = null;
 
@@ -628,7 +721,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         }
 
         // must be implemented by a GLSurfaceView.EGLConfigChooser
-        public EGLConfig chooseConfig(EGL10 egl, EGLDisplay display) {
+        public EGLConfig chooseConfig(@NonNull EGL10 egl, EGLDisplay display) {
 
             // get the number of minimally matching EGL configurations
             int[] num_config = new int[1];
@@ -645,17 +738,17 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
         }
 
         // subclasses can adjust these values
-        private int redSize;
-        private int greenSize;
-        private int blueSize;
-        private int alphaSize;
-        private int depthSize;
-        private int stencilSize;
+        private final int redSize;
+        private final int greenSize;
+        private final int blueSize;
+        private final int alphaSize;
+        private final int depthSize;
+        private final int stencilSize;
         private int aaSamples;
-        private int[] tmpValue = new int[1];
+        private final int[] tmpValue = new int[1];
         // we start with a minimum size of 4 bits for red/green/blue, but will perform actual matching in chooseConfig() below.
-        private static int EGL_OPENGL_ES_BIT = 1;
-        private static int[] configAttribs = {
+        private static final int EGL_OPENGL_ES_BIT = 1;
+        private static final int[] configAttribs = {
             EGL10.EGL_RED_SIZE, 4,
             EGL10.EGL_GREEN_SIZE, 4,
             EGL10.EGL_BLUE_SIZE, 4,
@@ -666,12 +759,13 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
     private static class TutorialViewRenderer implements GLSurfaceView.Renderer {
 
-        private TutorialView view;
+        // the view that created this renderer
+        private final TutorialView view;
 
-        TutorialViewRenderer(TutorialView myview) {
+        TutorialViewRenderer(TutorialView myView) {
 
             // keep track of view
-            view = myview;
+            view = myView;
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -683,11 +777,15 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
         public void onDrawFrame(GL10 gl) {
 
+            // check and perform a possible pending action
+            view.tutorialMenuPendingActionPerform();
             view.tutorialDraw((GL11)gl);
         }
 
         public void onSurfaceChanged(GL10 gl, int width, int height) {
 
+            // called when the surface changed size; in the detail, it is called after the surface
+            // is created and whenever the OpenGL ES surface size changes
             view.openvgResize((GL11)gl, width, height);
             view.tutorialResize();
         }
@@ -723,16 +821,6 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     }
 
     @Override
-    protected void onDetachedFromWindow() {
-
-        // destroy OpenVG resources created by the tutorial
-        tutorialDestroy();
-        // destroy OpenVG context and surface
-        openvgDestroy();
-        super.onDetachedFromWindow();
-    }
-
-    @Override
     public boolean onTouchEvent(MotionEvent event) {
 
         if (!gestureDetector.onTouchEvent(event)) {
@@ -740,6 +828,7 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
 
                 case MotionEvent.ACTION_DOWN:
                     tutorialTouchDown(event.getX(), event.getY());
+                    performClick();
                     break;
 
                 case MotionEvent.ACTION_UP:
@@ -757,7 +846,14 @@ public class TutorialView extends GLSurfaceView implements GestureDetector.OnDou
     }
 
     @Override
-    public boolean onDoubleTapEvent(MotionEvent event) {
+    public boolean performClick() {
+
+        super.performClick();
+        return true;
+    }
+
+    @Override
+    public boolean onDoubleTapEvent(@NonNull MotionEvent event) {
 
         if (event.getAction() == MotionEvent.ACTION_UP) {
             tutorialTouchDoubleTap(event.getX(), event.getY());

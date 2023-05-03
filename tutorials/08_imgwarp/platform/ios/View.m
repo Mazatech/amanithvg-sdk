@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -101,44 +101,39 @@
     GLint width, height;
     GLenum status;
 
-    // resolved framebuffer
-    glGenFramebuffersOES(1, &resolvedFrameBuffer);
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, resolvedFrameBuffer);
+    // NB: unlike other tutorials, in this case we do not setup a multi-sampled framebuffer
+    // because this tutorial makes use of vgGetPixels (see tutorial_08.c function genImage)
+    // to read the pixels from the drawing surface. In AmanithVG GLE, vgGetPixels and
+    // vgReadPixels (as well as some blend modes or some combinations of complex rendering
+    // states related to color transform and image modes) are implemented by using
+    // glReadPixels, that according to official specifications it returns GL_INVALID_OPERATION
+    // if GL_READ_FRAMEBUFFER_BINDING is non-zero, the read framebuffer is complete, and
+    // the value of GL_SAMPLE_BUFFERS for the read framebuffer is greater than zero
+    // (i.e. we cannot perform glReadPixels on multi-sampled buffers)
+    //
+    // framebuffer
+    glGenFramebuffersOES(1, &frameBuffer);
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
     // create and attach color buffer
-    glGenRenderbuffersOES(1, &resolvedColorRenderBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
+    glGenRenderbuffersOES(1, &colorRenderBuffer);
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
     [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:eaglLayer];
-    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
+    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, colorRenderBuffer);
+    // retrieve the height and width of the color renderbuffer
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &width);
+    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &height);
+    // create and attach depth+stencil buffer
+    glGenRenderbuffersOES(1, &depthRenderBuffer);
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, depthRenderBuffer);
+    glRenderbufferStorageOES(GL_RENDERBUFFER_OES, GL_DEPTH24_STENCIL8_OES, width, height);
+    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_DEPTH_ATTACHMENT_OES, GL_RENDERBUFFER_OES, depthRenderBuffer);
+    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_STENCIL_ATTACHMENT_OES, GL_RENDERBUFFER_OES, depthRenderBuffer);
     // final checkup
     status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
     if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
         NSLog(@"glesFrameBufferCreate: failed to build a complete framebuffer object; status code: %x", status);
         return VG_FALSE;
     }
-    // retrieve the height and width of the color renderbuffer
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &width);
-    glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &height);
-    // multi-sampled framebuffer
-    glGenFramebuffersOES(1, &sampledFrameBuffer);
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
-    // create and attach color buffer
-    glGenRenderbuffersOES(1, &sampledColorRenderBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
-    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_RGBA8_OES, width, height);
-    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
-    // create and attach depth+stencil buffer
-    glGenRenderbuffersOES(1, &sampledDepthRenderBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
-    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_DEPTH24_STENCIL8_OES, width, height);
-    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_DEPTH_ATTACHMENT_OES, GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
-    glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_STENCIL_ATTACHMENT_OES, GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
-    // final checkup
-    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
-    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"glesFrameBufferCreate: failed to build a complete multi-sampled framebuffer object; status code: %x", status);
-        return VG_FALSE;
-    }
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
 
     // set viewport
     glViewport(0, 0, width, height);
@@ -150,25 +145,17 @@
 
 - (void) glesFrameBufferDestroy {
 
-    if (resolvedFrameBuffer) {
-        glDeleteFramebuffersOES(1, &resolvedFrameBuffer);
-        resolvedFrameBuffer = 0;
+    if (frameBuffer) {
+        glDeleteFramebuffersOES(1, &frameBuffer);
+        frameBuffer = 0;
     }
-    if (resolvedColorRenderBuffer) {
-        glDeleteRenderbuffersOES(1, &resolvedColorRenderBuffer);
-        resolvedColorRenderBuffer = 0;
+    if (colorRenderBuffer) {
+        glDeleteRenderbuffersOES(1, &colorRenderBuffer);
+        colorRenderBuffer = 0;
     }
-    if (sampledFrameBuffer) {
-        glDeleteFramebuffersOES(1, &sampledFrameBuffer);
-        sampledFrameBuffer = 0;
-    }
-    if (sampledColorRenderBuffer) {
-        glDeleteRenderbuffersOES(1, &sampledColorRenderBuffer);
-        resolvedColorRenderBuffer = 0;
-    }
-    if (sampledDepthRenderBuffer) {
-        glDeleteRenderbuffersOES(1, &sampledDepthRenderBuffer);
-        sampledDepthRenderBuffer = 0;
+    if (depthRenderBuffer) {
+        glDeleteRenderbuffersOES(1, &depthRenderBuffer);
+        depthRenderBuffer = 0;
     }
 }
 
@@ -199,28 +186,52 @@
 *****************************************************************/
 - (VGboolean) openvgInit :(const VGuint)width :(const VGuint)height {
 
-    // create an OpenVG context
-    vgContext = vgPrivContextCreateMZT(NULL);
-    if (!vgContext) {
-        return VG_FALSE;
+    VGboolean ok;
+
+    // set quality parameters (range is [0; 100], where 100 represents the best quality)
+    vgConfigSetMZT(VG_CONFIG_CURVES_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_RADIAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_CONICAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    // set other parameters, if desired, before to call vgInitializeMZT
+
+    // initialize AmanithVG
+    ok = vgInitializeMZT();
+
+    if (ok) {
+        // create an OpenVG context
+        vgContext = vgPrivContextCreateMZT(NULL);
+        if (vgContext != NULL) {
+            // create a window surface (sRGBA premultiplied color space)
+            vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
+            if (vgWindowSurface != NULL) {
+                // bind context and surface
+                ok = vgPrivMakeCurrentMZT(vgContext, vgWindowSurface);
+            }
+            else {
+                // error when creating the drawing surface
+                ok = VG_FALSE;
+            }
+        }
+        else {
+            // error when creating the context
+            ok = VG_FALSE;
+        }
     }
 
-    // create a window surface (sRGBA premultiplied color space)
-    vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
-    if (!vgWindowSurface) {
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
+    // is something went wrong, release allocated OpenVG resources
+    if (!ok) {
+        if (vgWindowSurface != NULL) {
+            vgPrivSurfaceDestroyMZT(vgWindowSurface);
+        }
+        if (vgContext != NULL) {
+            vgPrivContextDestroyMZT(vgContext);
+        }
+        // terminate AmanithVG
+        vgTerminateMZT();
     }
 
-    // bind context and surface
-    if (vgPrivMakeCurrentMZT(vgContext, vgWindowSurface) == VG_FALSE) {
-        vgPrivSurfaceDestroyMZT(vgWindowSurface);
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
-    }
-
-    vgInitialized = VG_TRUE;
-    return VG_TRUE;
+    vgInitialized = ok;
+    return ok;
 }
 
 - (void) openvgDestroy {
@@ -231,6 +242,8 @@
     vgPrivSurfaceDestroyMZT(vgWindowSurface);
     // destroy OpenVG context
     vgPrivContextDestroyMZT(vgContext);
+    // terminate AmanithVG
+    vgTerminateMZT();
 }
 
 // get the width of OpenVG drawing surface, in pixels
@@ -254,7 +267,7 @@
 // get the maximum surface dimension supported by the OpenVG backend
 - (VGint) openvgSurfaceMaxDimensionGet {
 
-    return vgPrivSurfaceMaxDimensionGetMZT();
+    return (VGint)vgConfigGetMZT(VG_CONFIG_MAX_SURFACE_DIMENSION_MZT);
 }
 
 #ifdef AM_SRE
@@ -340,6 +353,7 @@
 
     // finalize rendering and push the command buffer to the GPU
     [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
     // acknowledge AmanithVG that we have performed a swapbuffers
     vgPostSwapBuffersMZT();
 }
@@ -379,14 +393,11 @@
 
 - (void) render :(CADisplayLink*)displayLink {
 
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
     // draw OpenVG content
     tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-    // "resolve" the multi-sampled framebuffer
-    glBindFramebufferOES(GL_DRAW_FRAMEBUFFER_APPLE, resolvedFrameBuffer);
-    glBindFramebufferOES(GL_READ_FRAMEBUFFER_APPLE, sampledFrameBuffer);
-    glResolveMultisampleFramebufferAPPLE();
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
+    // bind color buffer
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
     // present color buffer
     [eaglContext presentRenderbuffer:GL_RENDERBUFFER_OES];
     // acknowledge AmanithVG that we have performed a swapbuffers
@@ -398,32 +409,32 @@
     GLenum status;
     GLint glWidth, glHeight;
 
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, resolvedFrameBuffer);
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, resolvedColorRenderBuffer);
+    // NB: unlike other tutorials, in this case we do not setup a multi-sampled framebuffer
+    // because this tutorial makes use of vgGetPixels (see tutorial_08.c function genImage)
+    // to read the pixels from the drawing surface. In AmanithVG GLE, vgGetPixels and
+    // vgReadPixels (as well as some blend modes or some combinations of complex rendering
+    // states related to color transform and image modes) are implemented by using
+    // glReadPixels, that according to official specifications it returns GL_INVALID_OPERATION
+    // if GL_READ_FRAMEBUFFER_BINDING is non-zero, the read framebuffer is complete, and
+    // the value of GL_SAMPLE_BUFFERS for the read framebuffer is greater than zero
+    // (i.e. we cannot perform glReadPixels on multi-sampled buffers)
+    //
+    // bind framebuffer
+    glBindFramebufferOES(GL_FRAMEBUFFER_OES, frameBuffer);
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, colorRenderBuffer);
     [eaglContext renderbufferStorage:GL_RENDERBUFFER_OES fromDrawable:layer];
     // retrieve the height and width of the color renderbuffer
     glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &glWidth);
     glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &glHeight);
+    // resize depth and stencil buffers
+    glBindRenderbufferOES(GL_RENDERBUFFER_OES, depthRenderBuffer);
+    glRenderbufferStorageOES(GL_RENDERBUFFER_OES, GL_DEPTH24_STENCIL8_OES, glWidth, glHeight);
     // final checkup
     status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
     if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
         NSLog(@"resizeFromLayer: failed to resize the framebuffer object; status code: %x", status);
         return VG_FALSE;
     }
-    glBindFramebufferOES(GL_FRAMEBUFFER_OES, sampledFrameBuffer);
-    // resize sampled color buffer
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
-    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_RGBA8_OES, glWidth, glHeight);
-    // resize depth and stencil buffers
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledDepthRenderBuffer);
-    glRenderbufferStorageMultisampleAPPLE(GL_RENDERBUFFER_OES, 4, GL_DEPTH24_STENCIL8_OES, glWidth, glHeight);
-    // final checkup
-    status = glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES);
-    if (status != GL_FRAMEBUFFER_COMPLETE_OES) {
-        NSLog(@"resizeFromLayer: failed to resize the multi-sampled framebuffer object; status code: %x", status);
-        return VG_FALSE;
-    }
-    glBindRenderbufferOES(GL_RENDERBUFFER_OES, sampledColorRenderBuffer);
 
     // resize AmanithVG surface
     vgPrivSurfaceResizeMZT(vgWindowSurface, glWidth, glHeight);
@@ -570,6 +581,8 @@
         [self setMultipleTouchEnabled:YES];
         [self gesturesSetup];
         // init OpenVG
+        vgContext = NULL;
+        vgWindowSurface = NULL;
         if ([self openvgInit :colorRenderBufferWidth :colorRenderBufferHeight]) {
             // init tutorial application (as a preferred image format, we pass the drawing surface one, in order to speedup "read pixels" operations and rendering)
             tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet], [self openvgSurfaceFormatGet]);

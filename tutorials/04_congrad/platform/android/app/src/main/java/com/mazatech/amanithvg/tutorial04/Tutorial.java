@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -15,6 +15,9 @@
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial04;
 
+import android.graphics.PointF;
+import android.support.annotation.NonNull;
+
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
@@ -25,7 +28,7 @@ import static javax.microedition.khronos.openvg.VG11Ext.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath filledCircle;
     private VGPath controlPoint;
@@ -33,52 +36,48 @@ class Tutorial {
     private VGPaint solidCol;
     private VGPaint conGrad;
     // conical gradient parameters
-    private float[] conGradCenter;
-    private float[] conGradTarget;
-    private float conGradRepeats;
+    private final PointF conGradCenter;
+    private final PointF conGradTarget;
+    private final float conGradRepeats;
+    // keep track if new gradient parameters must be uploaded to the OpenVG backend
+    private boolean updatePoints;
     // current paint states
     private boolean linearInterpolation;
     private boolean smoothRampSupported;
     private int spreadMode;
     // keep track of "path user to surface" transformation
     private float userToSurfaceScale;
-    private float[] userToSurfaceTranslation;
+    private final PointF userToSurfaceTranslation;
     private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
 
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
-
     private static final int CONTROL_POINT_NONE = 0;
     private static final int CONTROL_POINT_CENTER = 1;
     private static final int CONTROL_POINT_TARGET = 2;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         filledCircle = null;
         controlPoint = null;
         solidCol = null;
         conGrad = null;
-        conGradCenter = new float[] { 0.0f, 0.0f };
-        conGradTarget = new float[] { 0.0f, 0.0f };
+        conGradCenter = new PointF(0.0f, 0.0f);
+        conGradTarget = new PointF(0.0f, 0.0f);
         conGradRepeats = 2.0f;
+        updatePoints = false;
         linearInterpolation = true;
         smoothRampSupported = false;
         spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         userToSurfaceScale = 1.0f;
-        userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
+        userToSurfaceTranslation = new PointF(0.0f, 0.0f);
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -108,58 +107,65 @@ class Tutorial {
         int halfDim = (surfaceWidth < surfaceHeight) ? (surfaceWidth / 2) : (surfaceHeight / 2);
 
         userToSurfaceScale = (float)halfDim * 0.9f;
-        userToSurfaceTranslation[X_COORD] = (float)(surfaceWidth / 2);
-        userToSurfaceTranslation[Y_COORD] = (float)(surfaceHeight / 2);
+        userToSurfaceTranslation.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
     }
 
     // calculate the position of conical gradient control points, in surface space
-    private void gradientParamsGet(float[] srfCenterPoint,
-                                   float[] srfTargetPoint) {
+    private void gradientParamsGet(@NonNull PointF srfCenterPoint,
+                                   @NonNull PointF srfTargetPoint) {
 
         // start point (apply the "path user to surface" transformation)
-        srfCenterPoint[X_COORD] = (conGradCenter[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfCenterPoint[Y_COORD] = (conGradCenter[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfCenterPoint.x = (conGradCenter.x * userToSurfaceScale) + userToSurfaceTranslation.x;
+        srfCenterPoint.y = (conGradCenter.y * userToSurfaceScale) + userToSurfaceTranslation.y;
         // target point (apply the "path user to surface" transformation)
-        srfTargetPoint[X_COORD] = (conGradTarget[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfTargetPoint[Y_COORD] = (conGradTarget[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfTargetPoint.x = (conGradTarget.x * userToSurfaceScale) + userToSurfaceTranslation.x;
+        srfTargetPoint.y = (conGradTarget.y * userToSurfaceScale) + userToSurfaceTranslation.y;
     }
 
     // set the position of conical gradient control points, in surface space
-    private void gradientParamsSet(final float[] srfCenterPoint,
-                                   final float[] srfTargetPoint) {
-
-        // conical gradient parameters
-        float conGradParams[] = new float[5];
+    private void gradientParamsSet(@NonNull final PointF srfCenterPoint,
+                                   @NonNull final PointF srfTargetPoint) {
 
         // apply the inverse "path user to surface" transformation
-        conGradCenter[X_COORD] = (srfCenterPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        conGradCenter[Y_COORD] = (srfCenterPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
-        conGradTarget[X_COORD] = (srfTargetPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        conGradTarget[Y_COORD] = (srfTargetPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
+        conGradCenter.x = (srfCenterPoint.x - userToSurfaceTranslation.x) / userToSurfaceScale;
+        conGradCenter.y = (srfCenterPoint.y - userToSurfaceTranslation.y) / userToSurfaceScale;
+        conGradTarget.x = (srfTargetPoint.x - userToSurfaceTranslation.x) / userToSurfaceScale;
+        conGradTarget.y = (srfTargetPoint.y - userToSurfaceTranslation.y) / userToSurfaceScale;
 
-        // upload new gradient parameters to the OpenVG backend
-        conGradParams[0] = conGradCenter[X_COORD];
-        conGradParams[1] = conGradCenter[Y_COORD];
-        conGradParams[2] = conGradTarget[X_COORD];
-        conGradParams[3] = conGradTarget[Y_COORD];
-        conGradParams[4] = conGradRepeats;
-        vg.vgSetParameterfv(conGrad, VG_PAINT_CONICAL_GRADIENT_MZT, 5, conGradParams);
+        // we need to upload new gradient parameters to the OpenVG backend
+        // NB: must be performed within the rendering thread at the next 'draw' call
+        updatePoints = true;
     }
 
     // reset gradient parameters
     private void gradientParamsReset(final int surfaceWidth,
                                      final int surfaceHeight) {
 
-        float[] gradCenter = new float[] { (float)surfaceWidth * 0.5f, (float)surfaceHeight * 0.5f };
-        float[] gradTarget = new float[] { (float)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f };
+        PointF gradCenter = new PointF((float)surfaceWidth * 0.5f, (float)surfaceHeight * 0.5f);
+        PointF gradTarget = new PointF((float)surfaceWidth * 0.75f, (float)surfaceHeight * 0.5f);
         gradientParamsSet(gradCenter, gradTarget);
+    }
+
+    // upload new gradient parameters to the OpenVG backend
+    private void gradientParamsUpload() {
+
+        // conical gradient parameters
+        float[] conGradParams = new float[] {
+            conGradCenter.x,
+            conGradCenter.y,
+            conGradTarget.x,
+            conGradTarget.y,
+            conGradRepeats
+        };
+
+        vg.vgSetParameterfv(conGrad, VG_PAINT_CONICAL_GRADIENT_MZT, 5, conGradParams);
     }
 
     private void genPaints() {
 
-        float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+        float[] white = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
         // linear gradient color keys
-        float colKeys[] = new float[] {
+        float[] colKeys = new float[] {
             0.00f, 0.40f, 0.00f, 0.60f, 1.00f,
             0.25f, 0.90f, 0.50f, 0.10f, 1.00f,
             0.50f, 0.80f, 0.80f, 0.00f, 1.00f,
@@ -194,7 +200,7 @@ class Tutorial {
               int surfaceHeight) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -244,20 +250,27 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        float gradCenter[] = new float[2];
-        float gradTarget[] = new float[2];
+        PointF gradCenter = new PointF();
+        PointF gradTarget = new PointF();
 
         // clear the whole drawing surface
         vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
+
+        // upload new gradient parameters to the OpenVG backend, if needed
+        if (updatePoints) {
+            gradientParamsUpload();
+            updatePoints = false;
+        }
 
         // calculate "path user to surface" transformation
         userToSurfaceCalc(surfaceWidth, surfaceHeight);
         // upload "path user to surface" transformation to the OpenVG backend
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(userToSurfaceTranslation[X_COORD], userToSurfaceTranslation[Y_COORD]);
+        vg.vgTranslate(userToSurfaceTranslation.x, userToSurfaceTranslation.y);
         vg.vgScale(userToSurfaceScale, userToSurfaceScale);
         // draw the filled circle
+        vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
         vg.vgSetPaint(conGrad, VG_FILL_PATH);
         vg.vgDrawPath(filledCircle, VG_FILL_PATH);
 
@@ -267,10 +280,10 @@ class Tutorial {
         // draw conical gradient control points
         vg.vgSetPaint(solidCol, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradCenter[X_COORD], gradCenter[Y_COORD]);
+        vg.vgTranslate(gradCenter.x, gradCenter.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradTarget[X_COORD], gradTarget[Y_COORD]);
+        vg.vgTranslate(gradTarget.x, gradTarget.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
     }
 
@@ -305,9 +318,6 @@ class Tutorial {
         else {
             spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         }
-
-        // upload the new spread mode to the OpenVG backend
-        vg.vgSetParameteri(conGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
     }
 
     /*****************************************************************
@@ -317,13 +327,13 @@ class Tutorial {
                    float y) {
 
         float distCenter, distTarget;
-        float gradCenter[] = new float[2];
-        float gradTarget[] = new float[2];
+        PointF gradCenter = new PointF();
+        PointF gradTarget = new PointF();
 
         // get current gradient parameters
         gradientParamsGet(gradCenter, gradTarget);
-        distCenter = distance(x, y, gradCenter[X_COORD], gradCenter[Y_COORD]);
-        distTarget = distance(x, y, gradTarget[X_COORD], gradTarget[Y_COORD]);
+        distCenter = distance(x, y, gradCenter.x, gradCenter.y);
+        distTarget = distance(x, y, gradTarget.x, gradTarget.y);
         // check if we have picked a gradient control point
         if (distCenter < distTarget) {
             pickedControlPoint = (distCenter < controlPointsRadius * 1.1f) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
@@ -331,9 +341,6 @@ class Tutorial {
         else {
             pickedControlPoint = (distTarget < controlPointsRadius * 1.1f) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -350,25 +357,20 @@ class Tutorial {
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
                 // get current gradient parameters
-                float gradCenter[] = new float[2];
-                float gradTarget[] = new float[2];
+                PointF gradCenter = new PointF();
+                PointF gradTarget = new PointF();
                 gradientParamsGet(gradCenter, gradTarget);
                 // assign the new control point position
                 if (pickedControlPoint == CONTROL_POINT_CENTER) {
-                    gradCenter[X_COORD] = x;
-                    gradCenter[Y_COORD] = y;
+                    gradCenter.set(x, y);
                 }
                 else {
-                    gradTarget[X_COORD] = x;
-                    gradTarget[Y_COORD] = y;
+                    gradTarget.set(x, y);
                 }
                 // update gradient parameters
                 gradientParamsSet(gradCenter, gradTarget);
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

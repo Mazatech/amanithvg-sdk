@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -38,7 +38,7 @@ public interface VG11 extends VG101 {
     /*-------------------------------------------------------------------------------
                                   Masking and Clearing
     -------------------------------------------------------------------------------*/
-    public void vgMask(VGHandle mask, int operation, int x, int y, int width, int height);
+    public void vgMask(VGMaskLayer mask, int operation, int x, int y, int width, int height);
     public void vgRenderToMask(VGPath path, int paintModes, int operation);
     public VGMaskLayer vgCreateMaskLayer(int width, int height);
     public void vgDestroyMaskLayer(VGMaskLayer maskLayer);

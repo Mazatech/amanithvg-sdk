@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -16,6 +16,7 @@
 package com.mazatech.amanithvg.tutorial10;
 
 import android.graphics.PointF;
+import android.support.annotation.NonNull;
 
 import java.util.Random;
 
@@ -29,7 +30,7 @@ import static javax.microedition.khronos.openvg.VG101.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath ship;
     private VGPath shipBackground;
@@ -45,26 +46,21 @@ class Tutorial {
     private static final int maskImageSize = 512;
     // current alpha mask configuration
     private int mask0Type;
-    private float[] mask0Pos;
+    private final PointF mask0Pos;
     private int mask1Type;
-    private float[] mask1Pos;
+    private final PointF mask1Pos;
     private int maskOperation;
     // control points
     private float controlPointsRadius;
     private int pickedControlPoint;
     private boolean mustUpdateMask;
     // random numbers generator
-    private Random rnd;
+    private final Random rnd;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
-
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
 
     private static final int CONTROL_POINT_NONE = 0;
     private static final int CONTROL_POINT_MASK0 = 1;
@@ -80,7 +76,7 @@ class Tutorial {
     private static final int MaskImage0 = 2;
     private static final int MaskImage1 = 3;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         ship = null;
@@ -94,16 +90,14 @@ class Tutorial {
         starMaskImage = null;
         cloudMaskImage = null;
         mask0Type = MaskPath0;
-        mask0Pos = new float[] { 0.0f, 0.0f };
+        mask0Pos = new PointF(0.0f, 0.0f);
         mask1Type = MaskPath1;
-        mask1Pos = new float[] { 0.0f, 0.0f };
+        mask1Pos = new PointF(0.0f, 0.0f);
         maskOperation = VG_UNION_MASK;
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
         mustUpdateMask = false;
         rnd = new Random();
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -162,17 +156,17 @@ class Tutorial {
     private float setAlphaPrimitive(int surfaceWidth,
                                     int surfaceHeight,
                                     int type,
-                                    float[] pos) {
+                                    @NonNull final PointF pos) {
 
         float scl = 1.0f;
 
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(pos[X_COORD], pos[Y_COORD]);
+        vg.vgTranslate(pos.x, pos.y);
 
         if ((type == MaskPath0) || (type == MaskPath1)) {
             // vector path
-            int minDim = (surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight;
+            int minDim = Math.min(surfaceWidth, surfaceHeight);
             // 3/4 of the minimum surface dimension
             int size = (minDim * 3) / 4;
             // first alpha path is centered at [0.35; 0.347]
@@ -192,7 +186,7 @@ class Tutorial {
     private void drawAlphaMaskPrimitive(int surfaceWidth,
                                         int surfaceHeight,
                                         int type,
-                                        float[] pos,
+                                        final PointF pos,
                                         int operation) {
 
         // setup transformation for the apha mask primitive
@@ -206,7 +200,7 @@ class Tutorial {
             // alpha image
             VGImage mask = (type == MaskImage0) ? starMaskImage : cloudMaskImage;
             // vgMask just modifies the specified region
-            vg.vgMask(mask, operation, (int)pos[X_COORD] - (maskImageSize / 2), (int)pos[Y_COORD] - (maskImageSize / 2), maskImageSize, maskImageSize);
+            vg.vgMask(mask, operation, (int)pos.x - (maskImageSize / 2), (int)pos.y - (maskImageSize / 2), maskImageSize, maskImageSize);
         }
     }
 
@@ -219,7 +213,7 @@ class Tutorial {
         // vgMask just modifies the specified region, so in order to be consistent
         // we ensure to clear alpha mask as a pre-step
         if ((mask0Type == MaskImage0) || (mask0Type == MaskImage1)) {
-            vg.vgMask(null, VG_CLEAR_MASK, 0, 0, surfaceWidth, surfaceHeight);
+            vg.vgMask((VGImage)null, VG_CLEAR_MASK, 0, 0, surfaceWidth, surfaceHeight);
         }
         drawAlphaMaskPrimitive(surfaceWidth, surfaceHeight, mask0Type, mask0Pos, VG_SET_MASK);
         drawAlphaMaskPrimitive(surfaceWidth, surfaceHeight, mask1Type, mask1Pos, maskOperation);
@@ -271,11 +265,9 @@ class Tutorial {
 
         // reset alpha primitives type and position
         mask0Type = MaskPath0;
-        mask0Pos[X_COORD] = (float)(surfaceWidth / 2);
-        mask0Pos[Y_COORD] = (float)(surfaceHeight / 2);
+        mask0Pos.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
         mask1Type = MaskPath1;
-        mask1Pos[X_COORD] = (float)(surfaceWidth / 2);
-        mask1Pos[Y_COORD] = (float)(surfaceHeight / 2);
+        mask1Pos.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
         maskOperation = VG_UNION_MASK;
         // generate/draw alpha mask
         drawAlphaMask(surfaceWidth, surfaceHeight);
@@ -287,7 +279,7 @@ class Tutorial {
               final byte[] rawCloudData) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -342,7 +334,7 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        int minDim = (surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight;
+        int minDim = Math.min(surfaceWidth, surfaceHeight);
         float shipScl = (float)((minDim * 3) / 5);
 
         if (mustUpdateMask) {
@@ -376,10 +368,10 @@ class Tutorial {
         vg.vgSetfv(VG_STROKE_DASH_PATTERN, 0, noDash);
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(mask0Pos[X_COORD], mask0Pos[Y_COORD]);
+        vg.vgTranslate(mask0Pos.x, mask0Pos.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(mask1Pos[X_COORD], mask1Pos[Y_COORD]);
+        vg.vgTranslate(mask1Pos.x, mask1Pos.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
     }
 
@@ -420,16 +412,14 @@ class Tutorial {
     void toggleMask1() {
 
         mask0Type = toggleAlphaPrimitive(mask0Type);
-        // we update alpha mask within the 'draw' method, in order to
-        // stick to the rendering thread
+        // we update alpha mask within the 'draw' method, in order to stick to the rendering thread
         mustUpdateMask = true;
     }
 
     void toggleMask2() {
 
         mask1Type = toggleAlphaPrimitive(mask1Type);
-        // we update alpha mask within the 'draw' method, in order to
-        // stick to the rendering thread
+        // we update alpha mask within the 'draw' method, in order to stick to the rendering thread
         mustUpdateMask = true;
     }
 
@@ -454,8 +444,7 @@ class Tutorial {
 
         maskOperation = newOp;
 
-        // we update alpha mask within the 'draw' method, in order to
-        // stick to the rendering thread
+        // we update alpha mask within the 'draw' method, in order to stick to the rendering thread
         mustUpdateMask = true;
     }
 
@@ -478,8 +467,8 @@ class Tutorial {
         float distMask0, distMask1;
 
         // calculate touch distance from control points
-        distMask0 = distance(x, y, mask0Pos[X_COORD], mask0Pos[Y_COORD]);
-        distMask1 = distance(x, y, mask1Pos[X_COORD], mask1Pos[Y_COORD]);
+        distMask0 = distance(x, y, mask0Pos.x, mask0Pos.y);
+        distMask1 = distance(x, y, mask1Pos.x, mask1Pos.y);
         // check if we have picked a gradient control point
         if (distMask0 < distMask1) {
             pickedControlPoint = (distMask0 < controlPointsRadius * 1.1f) ? CONTROL_POINT_MASK0 : CONTROL_POINT_NONE;
@@ -487,9 +476,6 @@ class Tutorial {
         else {
             pickedControlPoint = (distMask1 < controlPointsRadius * 1.1f) ? CONTROL_POINT_MASK1 : CONTROL_POINT_NONE;
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -507,21 +493,18 @@ class Tutorial {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
                 // assign the new control point position
                 if (pickedControlPoint == CONTROL_POINT_MASK0) {
-                    mask0Pos[X_COORD] = x;
-                    mask0Pos[Y_COORD] = y;
+                    mask0Pos.x = x;
+                    mask0Pos.y = y;
                 }
                 else {
-                    mask1Pos[X_COORD] = x;
-                    mask1Pos[Y_COORD] = y;
+                    mask1Pos.x = x;
+                    mask1Pos.y = y;
                 }
                 // we update alpha mask within the 'draw' method, in order to
                 // stick to the rendering thread
                 mustUpdateMask = true;
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

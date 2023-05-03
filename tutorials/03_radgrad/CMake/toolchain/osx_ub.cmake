@@ -46,9 +46,13 @@ else()
 
 endif()
 
-set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures for MacOS X")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Deployment target for MacOS X")
+# in order to check compilers, cmake will try (as default) to build test applications
+# which is not always possible (especially in cross mobile environments); so we skip
+# the generation of test executables
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
+# 64bit architectures
+set(CMAKE_OSX_ARCHITECTURES "arm64" "x86_64" CACHE STRING "Build architectures for MacOS X")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

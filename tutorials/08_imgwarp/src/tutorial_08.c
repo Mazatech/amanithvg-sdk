@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -110,12 +110,13 @@ static void genImage(const VGint surfaceWidth,
                      const VGint surfaceHeight) {
 
     VGuint i;
+    VGint drawWidth, drawHeight;
     // opaque white
     VGfloat white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
     // find a suitable uniform scale
     VGfloat sx = (VGfloat)surfaceWidth / 620.0f;
     VGfloat sy = (VGfloat)surfaceHeight / 754.0f;
-    VGfloat s = 0.80f * ((sx < sy) ? sx : sy);
+    VGfloat s = 0.98f * ((sx < sy) ? sx : sy);
 
     // calculate image dimensions
     imageWidth = (VGint)(620.0f * s);
@@ -129,7 +130,7 @@ static void genImage(const VGint surfaceWidth,
     vgSeti(VG_BLEND_MODE, VG_BLEND_SRC);
     vgSetfv(VG_CLEAR_COLOR, 4, white);
     vgClear(0, 0, surfaceWidth, surfaceHeight);
-    // generate the image at the lower-left origin (0, 0) of the surface 
+    // generate the image at the lower-left origin (0, 0) of the surface
     vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
     vgLoadIdentity();
     vgScale(s, s);
@@ -143,13 +144,15 @@ static void genImage(const VGint surfaceWidth,
         vgDrawPath(girlPaths[i], VG_FILL_PATH);
     }
     vgGetPixels(girlImage, 0, 0, 0, 0, imageWidth, imageHeight);
+    drawWidth = (VGint)(imageWidth * 0.75f);
+    drawHeight = (VGint)(imageHeight * 0.75f);
     // reset control points as a centered rectangular region (with the same image dimensions)
-    imageControlPoints[0].x = (VGfloat)((surfaceWidth - imageWidth) / 2);
-    imageControlPoints[0].y = (VGfloat)((surfaceHeight - imageHeight) / 2);
-    imageControlPoints[1].x = imageControlPoints[0].x + (VGfloat)imageWidth;
+    imageControlPoints[0].x = (VGfloat)((surfaceWidth - drawWidth) / 2);
+    imageControlPoints[0].y = (VGfloat)((surfaceHeight - drawHeight) / 2);
+    imageControlPoints[1].x = imageControlPoints[0].x + (VGfloat)drawWidth;
     imageControlPoints[1].y = imageControlPoints[0].y;
     imageControlPoints[2].x = imageControlPoints[1].x;
-    imageControlPoints[2].y = imageControlPoints[0].y + (VGfloat)imageHeight;
+    imageControlPoints[2].y = imageControlPoints[0].y + (VGfloat)drawHeight;
     imageControlPoints[3].x = imageControlPoints[0].x;
     imageControlPoints[3].y = imageControlPoints[2].y;
     // generate image bounds path

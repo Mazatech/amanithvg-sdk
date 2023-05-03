@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -16,6 +16,7 @@
 package com.mazatech.amanithvg.tutorial06;
 
 import android.graphics.PointF;
+import android.support.annotation.NonNull;
 
 import java.util.Random;
 
@@ -29,7 +30,7 @@ import static javax.microedition.khronos.openvg.VG11Ext.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath strokedFlower;
     private VGPath controlPoint;
@@ -47,22 +48,17 @@ class Tutorial {
     private boolean separableCapsSupported;
     // keep track of "path user to surface" transformation
     private float userToSurfaceScale;
-    private float[] userToSurfaceTranslation;
-    private PointF[] controlPoints;
+    private final PointF userToSurfaceTranslation;
+    private final PointF[] controlPoints;
     private int pickedControlPoint;
     boolean mustUpdatePaths;
     // random numbers generator
-    private Random rnd;
+    private final Random rnd;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
-
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
 
     private static final int CONTROL_POINT_NONE = -1;
 
@@ -86,7 +82,7 @@ class Tutorial {
         {  5.0f, 45.0f, 35.0f, 25.0f }
     };
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         dashPattern = 0;
@@ -97,7 +93,7 @@ class Tutorial {
         endCapStyle = VG_CAP_ROUND;
         separableCapsSupported = false;
         userToSurfaceScale = 1.0f;
-        userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
+        userToSurfaceTranslation = new PointF(0.0f, 0.0f);
         controlPoints = new PointF[12];
         for (int i = 0; i < 12; ++i) {
             controlPoints[i] = new PointF(0.0f, 0.0f);
@@ -106,8 +102,6 @@ class Tutorial {
         mustUpdatePaths = false;
         controlPointsRadius = 14.0f;
         rnd = new Random();
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -137,44 +131,43 @@ class Tutorial {
         int halfDim = (surfaceWidth < surfaceHeight) ? (surfaceWidth / 2) : (surfaceHeight / 2);
 
         userToSurfaceScale = ((float)halfDim / 256.0f) * 0.9f;
-        userToSurfaceTranslation[X_COORD] = (float)(surfaceWidth / 2);
-        userToSurfaceTranslation[Y_COORD] = (float)(surfaceHeight / 2);
+        userToSurfaceTranslation.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
     }
 
     // calculate the position of a control point, in surface space
-    private void controlPointGet(final float[] userSpaceControlPoint,
-                                 float[] srfControlPoint) {
+    private void controlPointGet(@NonNull final PointF userSpaceControlPoint,
+                                 @NonNull PointF srfControlPoint) {
 
         // apply the "path user to surface" transformation
-        srfControlPoint[X_COORD] = (userSpaceControlPoint[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfControlPoint[Y_COORD] = (userSpaceControlPoint[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfControlPoint.x = (userSpaceControlPoint.x * userToSurfaceScale) + userToSurfaceTranslation.x;
+        srfControlPoint.y = (userSpaceControlPoint.y * userToSurfaceScale) + userToSurfaceTranslation.y;
     }
 
     // set the position of a control point, in surface space
-    private void controlPointSet(final float[] srfControlPoint,
-                                 float[] userSpaceControlPoint) {
+    private void controlPointSet(@NonNull final PointF srfControlPoint,
+                                 @NonNull PointF userSpaceControlPoint) {
 
         // apply the inverse "path user to surface" transformation
-        userSpaceControlPoint[X_COORD] = (srfControlPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        userSpaceControlPoint[Y_COORD] = (srfControlPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
+        userSpaceControlPoint.x = (srfControlPoint.x - userToSurfaceTranslation.x) / userToSurfaceScale;
+        userSpaceControlPoint.y = (srfControlPoint.y - userToSurfaceTranslation.y) / userToSurfaceScale;
     }
 
     // reset control points
     private void controlPointsReset(final int surfaceWidth,
                                     final int surfaceHeight) {
 
-        controlPoints[ 0].x =  -48.0f; controlPoints[ 0].y =   48.0f;
-        controlPoints[ 1].x = -240.0f; controlPoints[ 1].y =  240.0f;
-        controlPoints[ 2].x =   48.0f; controlPoints[ 2].y =  240.0f;
-        controlPoints[ 3].x =   48.0f; controlPoints[ 3].y =   48.0f;
-        controlPoints[ 4].x =  240.0f; controlPoints[ 4].y =  240.0f;
-        controlPoints[ 5].x =  240.0f; controlPoints[ 5].y =  -48.0f;
-        controlPoints[ 6].x =   48.0f; controlPoints[ 6].y =  -48.0f;
-        controlPoints[ 7].x =  240.0f; controlPoints[ 7].y = -240.0f;
-        controlPoints[ 8].x =  -48.0f; controlPoints[ 8].y = -240.0f;
-        controlPoints[ 9].x =  -48.0f; controlPoints[ 9].y =  -48.0f;
-        controlPoints[10].x = -240.0f; controlPoints[10].y = -240.0f;
-        controlPoints[11].x = -240.0f; controlPoints[11].y =   48.0f;
+        controlPoints[ 0].set( -48.0f,   48.0f);
+        controlPoints[ 1].set(-240.0f,  240.0f);
+        controlPoints[ 2].set(  48.0f,  240.0f);
+        controlPoints[ 3].set(  48.0f,   48.0f);
+        controlPoints[ 4].set( 240.0f,  240.0f);
+        controlPoints[ 5].set( 240.0f,  -48.0f);
+        controlPoints[ 6].set(  48.0f,  -48.0f);
+        controlPoints[ 7].set( 240.0f, -240.0f);
+        controlPoints[ 8].set( -48.0f, -240.0f);
+        controlPoints[ 9].set( -48.0f,  -48.0f);
+        controlPoints[10].set(-240.0f, -240.0f);
+        controlPoints[11].set(-240.0f,   48.0f);
     }
 
     private void setDashPattern(int pattern) {
@@ -210,7 +203,7 @@ class Tutorial {
     private void updatePaths() {
 
         int i;
-        float pathCoords[] = new float[28];
+        float[] pathCoords = new float[28];
 
         // update the stroked flower
         vg.vgClearPath(strokedFlower, VG_PATH_CAPABILITY_ALL);
@@ -235,7 +228,7 @@ class Tutorial {
               int surfaceHeight) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -312,7 +305,7 @@ class Tutorial {
         // upload "path user to surface" transformation to the OpenVG backend
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(userToSurfaceTranslation[X_COORD], userToSurfaceTranslation[Y_COORD]);
+        vg.vgTranslate(userToSurfaceTranslation.x, userToSurfaceTranslation.y);
         vg.vgScale(userToSurfaceScale, userToSurfaceScale);
 
         // draw stroked flower path
@@ -345,12 +338,12 @@ class Tutorial {
         // draw control points
         vg.vgSetf(VG_STROKE_LINE_WIDTH, 2.0f);
         for (i = 0; i < 12; ++i) {
-            float srfSpacePoint[] = new float[2];
-            float userSpacePoint[] = new float[] { controlPoints[i].x, controlPoints[i].y };
+            PointF srfSpacePoint = new PointF();
+            PointF userSpacePoint = new PointF(controlPoints[i].x, controlPoints[i].y);
             // get control point position, in surface space
             controlPointGet(userSpacePoint, srfSpacePoint);
             vg.vgLoadIdentity();
-            vg.vgTranslate(srfSpacePoint[X_COORD], srfSpacePoint[Y_COORD]);
+            vg.vgTranslate(srfSpacePoint.x, srfSpacePoint.y);
             // draw a single control point
             vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         }
@@ -455,12 +448,12 @@ class Tutorial {
 
         for (i = 0; i < 12; ++i) {
             float dist;
-            float srfSpacePoint[] = new float[2];
-            float userSpacePoint[] = new float[] { controlPoints[i].x, controlPoints[i].y };
+            PointF srfSpacePoint = new PointF();
+            PointF userSpacePoint = new PointF(controlPoints[i].x, controlPoints[i].y);
             // get i-thm control point, in surface space
             controlPointGet(userSpacePoint, srfSpacePoint);
             // get its distance from mouse position
-            dist = distance(x, y, srfSpacePoint[X_COORD], srfSpacePoint[Y_COORD]);
+            dist = distance(x, y, srfSpacePoint.x, srfSpacePoint.y);
             if (dist < minDist) {
                 minDist = dist;
                 closestPoint = i;
@@ -468,9 +461,6 @@ class Tutorial {
         }
         // check if we have picked a control point
         pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -486,21 +476,15 @@ class Tutorial {
 
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
-                float userSpacePoint[] = new float[2];
-                float srfSpacePoint[] = new float[] { x, y };
+                PointF userSpacePoint = new PointF();
+                PointF srfSpacePoint = new PointF(x, y);
                 // set the new position for the selected control point
                 controlPointSet(srfSpacePoint, userSpacePoint);
-                controlPoints[pickedControlPoint].x = userSpacePoint[X_COORD];
-                controlPoints[pickedControlPoint].y = userSpacePoint[Y_COORD];
-                // we update paths within the 'draw' method, in order to
-                // stick to the rendering thread
+                controlPoints[pickedControlPoint].set(userSpacePoint);
+                // we update paths within the 'draw' method, in order to stick to the rendering thread
                 mustUpdatePaths = true;
             }
         }
-
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

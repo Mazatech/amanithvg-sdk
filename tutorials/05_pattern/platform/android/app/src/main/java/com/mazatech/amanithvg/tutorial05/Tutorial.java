@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -15,18 +15,20 @@
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial05;
 
+import android.graphics.PointF;
+import android.support.annotation.NonNull;
+
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
 import javax.microedition.khronos.openvg.VGImage;
 
 import static javax.microedition.khronos.openvg.VG101.*;
-import static javax.microedition.khronos.openvg.VG11Ext.*;
 
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath filledCircle;
     private VGPath controlPoint;
@@ -40,22 +42,18 @@ class Tutorial {
     private int patternImageFormat;
     // pattern parameters
     private int tilingMode;
-    private float[] patternCenter;
-    private float[] patternTarget;
+    private final PointF patternCenter;
+    private final PointF patternTarget;
     // keep track of "path user to surface" translation
-    private float[] userToSurfaceTranslation;
+    private final PointF userToSurfaceTranslation;
     private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
+    private final PointF oldTouch;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
-
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
 
     private static final int CONTROL_POINT_NONE = 0;
     private static final int CONTROL_POINT_CENTER = 1;
@@ -76,7 +74,7 @@ class Tutorial {
         0x303030FF, 0x606060FF, 0x909090FF, 0xB0B0B0FF
     };
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         filledCircle = null;
@@ -88,13 +86,12 @@ class Tutorial {
         patternImageSize = 0;
         patternImageFormat = VG_sRGBA_8888_PRE;
         tilingMode = VG_TILE_FILL;
-        patternCenter = new float[] { 0.0f, 0.0f };
-        patternTarget = new float[] { 0.0f, 0.0f };
-        userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
+        patternCenter = new PointF(0.0f, 0.0f);
+        patternTarget = new PointF(0.0f, 0.0f);
+        userToSurfaceTranslation = new PointF(0.0f, 0.0f);
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
+        oldTouch = new PointF(0.0f, 0.0f);
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -114,68 +111,63 @@ class Tutorial {
                              int surfaceHeight) {
 
         // calculate pattern direction
-        float[] dir = new float[] {
-            patternTarget[X_COORD] - patternCenter[X_COORD],
-            patternTarget[Y_COORD] - patternCenter[Y_COORD]
-        };
+        PointF dir = new PointF(patternTarget.x - patternCenter.x, patternTarget.y - patternCenter.y);
         // calculate pattern scale
-        float l = (float)Math.hypot(dir[X_COORD], dir[Y_COORD]);
+        float l = (float)Math.hypot(dir.x, dir.y);
         float paintToUserScale = l / (float)(patternImageSize);
         // calculate pattern rotation
-        float rotRadians = (float)Math.atan2(dir[Y_COORD], dir[X_COORD]);
+        float rotRadians = (float)Math.atan2(dir.y, dir.x);
         float rotDegrees = rotRadians * 57.2957795f;
         // calculate "user to surface" transformation
         float userToSurfaceScale = (float)((surfaceWidth < surfaceHeight) ? (surfaceWidth / 2) : (surfaceHeight / 2)) * 0.9f;
-        userToSurfaceTranslation[X_COORD] = (float)(surfaceWidth / 2);
-        userToSurfaceTranslation[Y_COORD] = (float)(surfaceHeight / 2);
+        userToSurfaceTranslation.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
 
         // "paint to user" transformation, upload matrix to the OpenVG backend
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_FILL_PAINT_TO_USER);
         vg.vgLoadIdentity();
-        vg.vgTranslate(patternCenter[X_COORD] / userToSurfaceScale, patternCenter[Y_COORD] / userToSurfaceScale);
+        vg.vgTranslate(patternCenter.x / userToSurfaceScale, patternCenter.y / userToSurfaceScale);
         vg.vgScale(paintToUserScale / userToSurfaceScale, paintToUserScale / userToSurfaceScale);
         vg.vgRotate(rotDegrees);
 
         // "user to surface" transformation, upload matrix to the OpenVG backend
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(userToSurfaceTranslation[X_COORD], userToSurfaceTranslation[Y_COORD]);
+        vg.vgTranslate(userToSurfaceTranslation.x, userToSurfaceTranslation.y);
         vg.vgScale(userToSurfaceScale, userToSurfaceScale);
     }
 
     // calculate the position of pattern control points, in surface space
-    private void patternParamsGet(float[] srfCenterPoint,
-                                  float[] srfTargetPoint) {
+    private void patternParamsGet(@NonNull PointF srfCenterPoint,
+                                  @NonNull PointF srfTargetPoint) {
 
-        srfCenterPoint[X_COORD] = patternCenter[X_COORD] + userToSurfaceTranslation[X_COORD];
-        srfCenterPoint[Y_COORD] = patternCenter[Y_COORD] + userToSurfaceTranslation[Y_COORD];
-        srfTargetPoint[X_COORD] = patternTarget[X_COORD] + userToSurfaceTranslation[X_COORD];
-        srfTargetPoint[Y_COORD] = patternTarget[Y_COORD] + userToSurfaceTranslation[Y_COORD];
+        srfCenterPoint.x = patternCenter.x + userToSurfaceTranslation.x;
+        srfCenterPoint.y = patternCenter.y + userToSurfaceTranslation.y;
+        srfTargetPoint.x = patternTarget.x + userToSurfaceTranslation.x;
+        srfTargetPoint.y = patternTarget.y + userToSurfaceTranslation.y;
     }
 
     // set the position of pattern control points, in surface space
-    private void patternParamsSet(final float[] srfCenterPoint,
-                                  final float[] srfTargetPoint) {
+    private void patternParamsSet(@NonNull final PointF srfCenterPoint,
+                                  @NonNull final PointF srfTargetPoint) {
 
-        patternCenter[X_COORD] = srfCenterPoint[X_COORD] - userToSurfaceTranslation[X_COORD];
-        patternCenter[Y_COORD] = srfCenterPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD];
-        patternTarget[X_COORD] = srfTargetPoint[X_COORD] - userToSurfaceTranslation[X_COORD];
-        patternTarget[Y_COORD] = srfTargetPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD];
+        patternCenter.x = srfCenterPoint.x - userToSurfaceTranslation.x;
+        patternCenter.y = srfCenterPoint.y - userToSurfaceTranslation.y;
+        patternTarget.x = srfTargetPoint.x - userToSurfaceTranslation.x;
+        patternTarget.y = srfTargetPoint.y - userToSurfaceTranslation.y;
     }
 
     // reset pattern control points
     private void patternParamsReset(final int surfaceWidth,
                                     final int surfaceHeight) {
 
-        patternCenter[X_COORD] = -(float)(patternImageSize / 2);
-        patternCenter[Y_COORD] = -(float)(patternImageSize / 2);
-        patternTarget[X_COORD] = patternCenter[X_COORD] + (float)(patternImageSize);
-        patternTarget[Y_COORD] = patternCenter[Y_COORD];
+        patternCenter.x = -(float)(patternImageSize / 2);
+        patternCenter.y = -(float)(patternImageSize / 2);
+        patternTarget.set(patternCenter.x + (float)(patternImageSize), patternCenter.y);
     }
 
     private void genPaints() {
 
-        float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+        float[] white = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
 
         // create a white color paint, used to draw control points
         solidCol = vg.vgCreatePaint();
@@ -183,7 +175,7 @@ class Tutorial {
         vg.vgSetParameterfv(solidCol, VG_PAINT_COLOR, 4, white);
         // create pattern image
         patternImage = vg.vgCreateImage(patternImageFormat, patternImageSize, patternImageSize, VG_IMAGE_QUALITY_BETTER);
-        int pixels[] = new int[patternImageSize * patternImageSize];
+        int[] pixels = new int[patternImageSize * patternImageSize];
         int blocks = patternImageSize / 4;
         for (int i = 0; i < patternImageSize; ++i) {
             int y = i / blocks;
@@ -212,16 +204,16 @@ class Tutorial {
         controlBounds = vg.vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F, 1.0f, 0.0f, 0, 0, VG_PATH_CAPABILITY_ALL);
     }
 
-    private void genPatternBounds(float[] srfCenterPoint,
-                                  float[] srfTargetPoint) {
+    private void genPatternBounds(@NonNull PointF srfCenterPoint,
+                                  @NonNull PointF srfTargetPoint) {
 
-        float dx = srfTargetPoint[X_COORD] - srfCenterPoint[X_COORD];
-        float dy = srfTargetPoint[Y_COORD] - srfCenterPoint[Y_COORD];
+        float dx = srfTargetPoint.x - srfCenterPoint.x;
+        float dy = srfTargetPoint.y - srfCenterPoint.y;
         float[] boundsCoords = new float[] {
-            srfCenterPoint[X_COORD], srfCenterPoint[Y_COORD],
-            srfTargetPoint[X_COORD], srfTargetPoint[Y_COORD],
-            srfTargetPoint[X_COORD] - dy, srfTargetPoint[Y_COORD] + dx,
-            srfCenterPoint[X_COORD] - dy, srfCenterPoint[Y_COORD] + dx
+            srfCenterPoint.x,      srfCenterPoint.y,
+            srfTargetPoint.x,      srfTargetPoint.y,
+            srfTargetPoint.x - dy, srfTargetPoint.y + dx,
+            srfCenterPoint.x - dy, srfCenterPoint.y + dx
         };
         vg.vgClearPath(controlBounds, VG_PATH_CAPABILITY_ALL);
         vg.vgAppendPathData(controlBounds, 5, boundsCmd, boundsCoords);
@@ -232,8 +224,8 @@ class Tutorial {
               int preferredImageFormat) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
-        float tileColor[] = new float[] { 0.1f, 0.6f, 0.3f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] tileColor = new float[] { 0.1f, 0.6f, 0.3f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -288,8 +280,8 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        float center[] = new float[2];
-        float target[] = new float[2];
+        PointF center = new PointF();
+        PointF target = new PointF();
 
         // clear the whole drawing surface
         vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
@@ -298,6 +290,7 @@ class Tutorial {
         setMatrices(surfaceWidth, surfaceHeight);
 
         // draw the filled circle
+        vg.vgSetParameteri(pattern, VG_PAINT_PATTERN_TILING_MODE, tilingMode);
         vg.vgSetPaint(pattern, VG_FILL_PATH);
         vg.vgDrawPath(filledCircle, VG_FILL_PATH);
 
@@ -313,10 +306,10 @@ class Tutorial {
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgSetPaint(solidCol, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(center[X_COORD], center[Y_COORD]);
+        vg.vgTranslate(center.x, center.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(target[X_COORD], target[Y_COORD]);
+        vg.vgTranslate(target.x, target.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
     }
 
@@ -339,8 +332,6 @@ class Tutorial {
         else {
             tilingMode = VG_TILE_PAD;
         }
-        // upload the new tiling mode to the OpenVG backend
-        vg.vgSetParameteri(pattern, VG_PAINT_PATTERN_TILING_MODE, tilingMode);
     }
 
     /*****************************************************************
@@ -350,14 +341,14 @@ class Tutorial {
                    float y) {
 
         float distCenter, distTarget;
-        float center[] = new float[2];
-        float target[] = new float[2];
+        PointF center = new PointF();
+        PointF target = new PointF();
 
         // get current pattern parameters
         patternParamsGet(center, target);
         // calculate touch distance from control points
-        distCenter = distance(x, y, center[X_COORD], center[Y_COORD]);
-        distTarget = distance(x, y, target[X_COORD], target[Y_COORD]);
+        distCenter = distance(x, y, center.x, center.y);
+        distTarget = distance(x, y, target.x, target.y);
         // check if we have picked a control point
         if (distCenter < distTarget) {
             pickedControlPoint = (distCenter < controlPointsRadius * 1.1f) ? CONTROL_POINT_CENTER : CONTROL_POINT_NONE;
@@ -366,8 +357,7 @@ class Tutorial {
             pickedControlPoint = (distTarget < controlPointsRadius * 1.1f) ? CONTROL_POINT_TARGET : CONTROL_POINT_NONE;
         }
         // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
+        oldTouch.set(x, y);
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -383,30 +373,28 @@ class Tutorial {
 
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
-                float center[] = new float[2];
-                float target[] = new float[2];
-                float dx = x - oldTouchX;
-                float dy = y - oldTouchY;
+                PointF center = new PointF();
+                PointF target = new PointF();
+                float dx = x - oldTouch.x;
+                float dy = y - oldTouch.y;
                 // get current pattern parameters
                 patternParamsGet(center, target);
                 // update selected control point
                 if (pickedControlPoint == CONTROL_POINT_CENTER) {
-                    center[X_COORD] += dx;
-                    center[Y_COORD] += dy;
-                    target[X_COORD] += dx;
-                    target[Y_COORD] += dy;
+                    center.x += dx;
+                    center.y += dy;
+                    target.x += dx;
+                    target.y += dy;
                 }
                 else {
-                    target[X_COORD] = x;
-                    target[Y_COORD] = y;
+                    target.set(x, y);
                 }
                 // update pattern parameters
                 patternParamsSet(center, target);
             }
         }
         // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
+        oldTouch.set(x, y);
     }
 
     void touchDoubleTap(float x,

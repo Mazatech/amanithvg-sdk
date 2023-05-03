@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -23,16 +23,15 @@ import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
 
 import static javax.microedition.khronos.openvg.VG101.*;
-import static javax.microedition.khronos.openvg.VG11Ext.*;
 
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath controlPoint;
     private VGPath imageBounds;
-    private VGPath[] girlPaths;
+    private final VGPath[] girlPaths;
     // paint objects
     private VGPaint solidCol;
     // girl image, dimensions and format
@@ -41,24 +40,19 @@ class Tutorial {
     private int imageHeight;
     private int imageFormat;
     // image control points
-    private PointF[] imageControlPoints;
+    private final PointF[] imageControlPoints;
     private float controlPointsRadius;
     private int pickedControlPoint;
     boolean mustUpdatePaths;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
 
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
-
     private static final int CONTROL_POINT_NONE = -1;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         int i;
 
@@ -81,8 +75,6 @@ class Tutorial {
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
         mustUpdatePaths = false;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -140,12 +132,13 @@ class Tutorial {
                           int surfaceHeight) {
 
         int i;
+        int drawWidth, drawHeight;
         // opaque white
         float[] white = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
         // find a suitable uniform scale
         float sx = (float)surfaceWidth / 620.0f;
         float sy = (float)surfaceHeight / 754.0f;
-        float s = 0.80f * ((sx < sy) ? sx : sy);
+        float s = 0.98f * Math.min(sx, sy);
 
         // calculate image dimensions
         imageWidth = (int)(620.0f * s);
@@ -174,13 +167,15 @@ class Tutorial {
             vg.vgDrawPath(girlPaths[i], VG_FILL_PATH);
         }
         vg.vgGetPixels(girlImage, 0, 0, 0, 0, imageWidth, imageHeight);
+        drawWidth = (int)(imageWidth * 0.75f);
+        drawHeight = (int)(imageHeight * 0.75f);
         // reset control points as a centered rectangular region (with the same image dimensions)
-        imageControlPoints[0].x = (float)((surfaceWidth - imageWidth) / 2);
-        imageControlPoints[0].y = (float)((surfaceHeight - imageHeight) / 2);
-        imageControlPoints[1].x = imageControlPoints[0].x + (float)imageWidth;
+        imageControlPoints[0].x = (float)((surfaceWidth - drawWidth) / 2);
+        imageControlPoints[0].y = (float)((surfaceHeight - drawHeight) / 2);
+        imageControlPoints[1].x = imageControlPoints[0].x + (float)drawWidth;
         imageControlPoints[1].y = imageControlPoints[0].y;
         imageControlPoints[2].x = imageControlPoints[1].x;
-        imageControlPoints[2].y = imageControlPoints[0].y + (float)imageHeight;
+        imageControlPoints[2].y = imageControlPoints[0].y + (float)drawHeight;
         imageControlPoints[3].x = imageControlPoints[0].x;
         imageControlPoints[3].y = imageControlPoints[2].y;
         // generate image bounds path
@@ -244,7 +239,7 @@ class Tutorial {
               int surfaceHeight) {
 
         int i;
-        float warpMatrix[] = new float[9];
+        float[] warpMatrix = new float[9];
         float[] clearColor = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
 
         if (mustUpdatePaths) {
@@ -291,10 +286,6 @@ class Tutorial {
     }
 
     /*****************************************************************
-                            interactive options
-    *****************************************************************/
-
-    /*****************************************************************
                             handle touch events
     *****************************************************************/
     void touchDown(float x,
@@ -313,9 +304,6 @@ class Tutorial {
         }
         // check if we have picked a control point
         pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -339,9 +327,6 @@ class Tutorial {
                 mustUpdatePaths = true;
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

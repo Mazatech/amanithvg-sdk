@@ -4,7 +4,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 function (get_os_subdir ret)
     if (DEFINED OS_WINDOWS)
-        set(${ret} "win" PARENT_SCOPE)
+        set(${ret} "windows" PARENT_SCOPE)
     elseif (DEFINED OS_MACOSX)
         set(${ret} "macosx" PARENT_SCOPE)
     elseif (DEFINED OS_LINUX)
@@ -389,7 +389,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     # run the application as standalone, directly within its directory
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                       ${OPENVG_LIBS_DIR}/libAmanithVG${CMAKE_SHARED_LIBRARY_SUFFIX}
+                       ${OPENVG_LIBS_DIR}/${OPENVG_LIB}${CMAKE_SHARED_LIBRARY_SUFFIX}
                        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -402,14 +402,26 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                               # Universal application for both iPad and iPhone
                               XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
                               XCODE_ATTRIBUTE_DEVICES "Universal"
+                              # disable bitcode
+                              XCODE_ATTRIBUTE_ENABLE_BITCODE "NO"
+                              XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER ${MACOSX_BUNDLE_GUI_IDENTIFIER}
                               RESOURCE "${APP_ICON} ${APP_OTHER_RESOURCES}")
         # include basic frameworks needed by the tutorial application (iOS)
         target_link_libraries(${PROJECT_NAME} PUBLIC "-framework CoreGraphics -framework QuartzCore -framework UIKit")
+        if (DEFINED ENGINE_GLE)
+            # avoid OpenGL ES 1 deprecation warnings
+            target_compile_definitions(${PROJECT_NAME} PUBLIC GLES_SILENCE_DEPRECATION)
+        endif()
     else()
         set_target_properties(${PROJECT_NAME} PROPERTIES
-                              MACOSX_BUNDLE_INFO_PLIST "${APP_SRC_PLATFORM_DIR}/info.plist.in")
+                              MACOSX_BUNDLE_INFO_PLIST "${APP_SRC_PLATFORM_DIR}/info.plist.in"
+                              XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER ${MACOSX_BUNDLE_GUI_IDENTIFIER})
         # include basic frameworks needed by the tutorial application (MacOS X)
         target_link_libraries(${PROJECT_NAME} PUBLIC "-framework QuartzCore -framework Cocoa")
+        if (DEFINED ENGINE_GLE)
+            # avoid OpenGL deprecation warnings
+            target_compile_definitions(${PROJECT_NAME} PUBLIC GL_SILENCE_DEPRECATION)
+        endif()
     endif()
 
     # cross compiling for MacOS X on a non-Darwin host system (e.g. Linux)
@@ -433,11 +445,14 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
+    # add math library
+    target_link_libraries(${PROJECT_NAME} PUBLIC m)
+
     # fix the application bundle/executable: copy the OpenVG library in order to
     # run the application as standalone, directly within its directory
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                       ${OPENVG_LIBS_DIR}/libAmanithVG${CMAKE_SHARED_LIBRARY_SUFFIX}.?
+                       ${OPENVG_LIBS_DIR}/lib${OPENVG_LIB}${CMAKE_SHARED_LIBRARY_SUFFIX}.?
                        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 
 endif()

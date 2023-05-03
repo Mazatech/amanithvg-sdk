@@ -3,10 +3,16 @@
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.2'
+        classpath('com.android.tools.build:gradle') {
+            // NB: at the moment the Android Gradle plugin v4.1 has problem with
+            // sdktools.gradle script (used to get/define the compileSdkVersion property)
+            version {
+                require '7.4.1'
+            }
+        }
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -15,7 +21,7 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 

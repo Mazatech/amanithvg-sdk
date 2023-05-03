@@ -6,7 +6,7 @@ set(iOS true CACHE STRING "iOS target")
 set(IOS true CACHE STRING "IOS target")
 # the 2 following variables are used internally by building scripts (i.e. not related to CMake variables)
 set(OS_IOS true CACHE STRING "iOS operating system (used internally, not related to CMake variables)")
-set(ARCH_UB true CACHE STRING "Universal binaries armv7/arm64 (used internally, not related to CMake variables)")
+set(ARCH_UB true CACHE STRING "Universal binaries arm64/x86_64 (used internally, not related to CMake variables)")
 
 if (NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Darwin")
 
@@ -45,18 +45,16 @@ else()
     set(CMAKE_OSX_SYSROOT ${IOS_SDK})
     set(CMAKE_FIND_ROOT_PATH ${IOS_TOOLCHAIN} ${IOS_SDK}/usr)
 
-    # in order to check compilers, cmake will try (as default) to build test applications
-    # that for iOS need code signing; so we skip the generation of test executables
-    # we could have used CMakeForceCompiler module, but the modern way is to use
-    # the CMAKE_TRY_COMPILE_TARGET_TYPE within the toolchain file
-    set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-
 endif()
 
-set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architectures for iOS")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "9.3" CACHE STRING "Deployment target for iOS")
-set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "9.3" CACHE STRING "Xcode deployment target for iOS")
+# in order to check compilers, cmake will try (as default) to build test applications
+# that for iOS need code signing; so we skip the generation of test executables
+# we could have used CMakeForceCompiler module, but the modern way is to use
+# the CMAKE_TRY_COMPILE_TARGET_TYPE within the toolchain file
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
+# 64bit architectures (device and simulator)
+set(CMAKE_OSX_ARCHITECTURES "arm64" "x86_64" CACHE STRING "Build architectures for iOS")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
@@ -64,7 +62,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CC_NO_UNINITIALIZED_WARNING "-Wno-uninitialized" CACHE STRING "No uninitialized variable warning for iOS compiler")
 
 # common flags
-set(IOS_COMMON_C_FLAGS "-O2 -ffast-math -fno-exceptions -fno-strict-aliasing -fomit-frame-pointer -fembed-bitcode -Wall -W")
+set(IOS_COMMON_C_FLAGS "-O2 -ffast-math -fno-exceptions -fno-strict-aliasing -fomit-frame-pointer -Wall -W")
 set(IOS_COMMON_CXX_FLAGS "${IOS_COMMON_C_FLAGS} -fno-rtti")
 
 # flags for Release build type or configuration

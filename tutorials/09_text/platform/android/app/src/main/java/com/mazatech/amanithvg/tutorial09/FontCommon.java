@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -14,6 +14,9 @@
  **
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial09;
+
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -46,7 +49,6 @@ public class FontCommon {
         //int commandsCount;
         final byte[] commands;
         // OpenVG path coordinates defining the glyph geometry
-        //int coordinatesCount;
         final float[] coordinates;
         // fill rule of glyph geometry
         int fillRule;
@@ -93,8 +95,8 @@ public class FontCommon {
     }
 
     // compare two mapped characters
-    private static Comparator<MappedChar> mappedCharsCompare = new Comparator<MappedChar>() {
-        public int compare(MappedChar ch0, MappedChar ch1) {
+    private static final Comparator<MappedChar> mappedCharsCompare = new Comparator<MappedChar>() {
+        public int compare(@NonNull MappedChar ch0, @NonNull MappedChar ch1) {
             return ch0.charCode - ch1.charCode;
         }
     };
@@ -125,15 +127,15 @@ public class FontCommon {
     }
 
     // compare two glyphs, by their glyph indices
-    private static Comparator<Glyph> glyphsCompare = new Comparator<Glyph>() {
-        public int compare(Glyph glyph0, Glyph glyph1) {
+    private static final Comparator<Glyph> glyphsCompare = new Comparator<Glyph>() {
+        public int compare(@NonNull Glyph glyph0, @NonNull Glyph glyph1) {
             return glyph0.glyphIndex - glyph1.glyphIndex;
         }
     };
 
     // given a glyph index, return the associated Glyph structure
-    static Glyph glyphFromGlyphIndex(final Font font,
-                                     final int glyphIndex) {
+    static @Nullable Glyph glyphFromGlyphIndex(@NonNull final Font font,
+                                               final int glyphIndex) {
 
         Glyph glyph = new Glyph(glyphIndex, null, null, null, 0);
         // glyphs are sorted by ascending glyph index, so we can
@@ -143,24 +145,24 @@ public class FontCommon {
     }
 
     // given a character code, return the associated Glyph structure
-    static Glyph glyphFromCharCode(final Font font,
-                                   final int charCode) {
+    static @Nullable Glyph glyphFromCharCode(final Font font,
+                                              final int charCode) {
 
         int glyphIndex = glyphIndexFromCharCode(font, charCode);
         return (glyphIndex >= 0) ? glyphFromGlyphIndex(font, glyphIndex) : null;
     }
 
     // compare two kerning entries
-    private static Comparator<KerningEntry> kerningsCompare = new Comparator<KerningEntry>() {
-        public int compare(KerningEntry krn0, KerningEntry krn1) {
+    private static final Comparator<KerningEntry> kerningsCompare = new Comparator<KerningEntry>() {
+        public int compare(@NonNull KerningEntry krn0, @NonNull KerningEntry krn1) {
             return krn0.key - krn1.key;
         }
     };
 
     // given a couple of glyph indices, return the relative kerning (NULL if kerning is zero)
-    static KerningEntry kerningFromGlyphIndices(final Font font,
-                                                final int leftGlyphIndex,
-                                                final int rightGlyphIndex) {
+    static @Nullable KerningEntry kerningFromGlyphIndices(@NonNull final Font font,
+                                                          final int leftGlyphIndex,
+                                                          final int rightGlyphIndex) {
 
         KerningEntry krn = new KerningEntry(
             // the key
@@ -172,9 +174,9 @@ public class FontCommon {
     }
 
     // given a couple of character codes, return the relative kerning (NULL if kerning is zero)
-    static KerningEntry kerningFromCharCodes(final Font font,
-                                             final int leftCharCode,
-                                             final int rightCharCode) {
+    static @Nullable  KerningEntry kerningFromCharCodes(final Font font,
+                                                        final int leftCharCode,
+                                                        final int rightCharCode) {
 
         int leftGlyphIndex = glyphIndexFromCharCode(font, leftCharCode);
         int rightGlyphIndex = glyphIndexFromCharCode(font, rightCharCode);
@@ -188,7 +190,7 @@ public class FontCommon {
     private static float[] tmpAdjustmentsY = null;
 
     // reserve temporary memory to store glyph indices and kernings, for printing/drawing purposes
-    private static boolean tempMemoryReserve(final int strLen) {
+    private static boolean tempMemoryReserve(int strLen) {
 
         if (tmpGlyphIndices == null) {
             // first allocation
@@ -211,7 +213,7 @@ public class FontCommon {
     }
 
     private static void textLineBuild(final Font font,
-                                      final String str) {
+                                      @NonNull final String str) {
 
         int i, j;
         int leftGlyphIndex = glyphIndexFromCharCode(font, str.charAt(0));
@@ -290,8 +292,8 @@ public class FontCommon {
                                   final Font font,
                                   final VGPath path,
                                   final String str,
-                                  final float fontSize,
-                                  final int paintModes) {
+                                  float fontSize,
+                                  int paintModes) {
 
 
         if ((font != null) && (path != null) && (str != null) && (fontSize > 0.0f) && (paintModes > 0)) {
@@ -314,25 +316,27 @@ public class FontCommon {
                 for (i = 0; i < strLen; ++i) {
                     // get glyph
                     Glyph glyph = glyphFromGlyphIndex(font, tmpGlyphIndices[i]);
-                    float halfEscapement = glyph.escapement[0] * 0.5f;
+                    if (glyph != null) {
 
-                    // evaluate path
-                    cursor += halfEscapement;
-                    vg.vgPointAlongPath(path, 0, pathSegmentsCount, cursor * fontSize, values, 0);
+                        float halfEscapement = glyph.escapement[0] * 0.5f;
+                        // evaluate path
+                        cursor += halfEscapement;
+                        vg.vgPointAlongPath(path, 0, pathSegmentsCount, cursor * fontSize, values, 0);
 
-                    // draw glyph
-                    vg.vgSetfv(VG_GLYPH_ORIGIN, 2, glyphOrigin, 0);
-                    vg.vgSeti(VG_FILL_RULE, glyph.fillRule);
-                    vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_GLYPH_USER_TO_SURFACE);
-                    vg.vgLoadIdentity();
-                    vg.vgTranslate(values[0], values[1]);
-                    vg.vgRotate((float)Math.atan2(values[3], values[2]) * 57.2957795f);
-                    vg.vgScale(fontSize, fontSize);
-                    vg.vgTranslate(-halfEscapement, 0.0f);
-                    vg.vgDrawGlyph(font.openvgHandle, tmpGlyphIndices[i], paintModes, false);
+                        // draw glyph
+                        vg.vgSetfv(VG_GLYPH_ORIGIN, 2, glyphOrigin, 0);
+                        vg.vgSeti(VG_FILL_RULE, glyph.fillRule);
+                        vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_GLYPH_USER_TO_SURFACE);
+                        vg.vgLoadIdentity();
+                        vg.vgTranslate(values[0], values[1]);
+                        vg.vgRotate((float)Math.atan2(values[3], values[2]) * 57.2957795f);
+                        vg.vgScale(fontSize, fontSize);
+                        vg.vgTranslate(-halfEscapement, 0.0f);
+                        vg.vgDrawGlyph(font.openvgHandle, tmpGlyphIndices[i], paintModes, false);
 
-                    // advance cursor
-                    cursor += halfEscapement + tmpAdjustmentsX[i];
+                        // advance cursor
+                        cursor += halfEscapement + tmpAdjustmentsX[i];
+                    }
                 }
             }
         }

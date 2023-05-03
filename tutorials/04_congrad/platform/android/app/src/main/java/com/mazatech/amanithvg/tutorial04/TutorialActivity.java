@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -15,9 +15,11 @@
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial04;
 
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Build;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -30,6 +32,7 @@ import static com.mazatech.amanithvg.tutorial04.TutorialView.*;
 
 public class TutorialActivity extends AppCompatActivity {
 
+    private static final String LOG_TAG = "TutorialActivity";
     // keep track of loaded AmanithVG native libraries
     static boolean nativeLibsLoaded = false;
     // view
@@ -37,7 +40,7 @@ public class TutorialActivity extends AppCompatActivity {
     // menu
     static final int QUIT_MENU_ITEM = 99;
 
-    private boolean copyFile(InputStream input, OutputStream output) {
+    private boolean copyFile(@NonNull InputStream input, OutputStream output) {
 
         boolean result;
 
@@ -56,7 +59,7 @@ public class TutorialActivity extends AppCompatActivity {
             result = true;
         }
         catch (java.io.IOException e) {
-            System.err.println("File copy failed.\n" + e);
+            Log.e(LOG_TAG, "File copy failed.\n" + e);
             result = false;
         }
 
@@ -78,7 +81,7 @@ public class TutorialActivity extends AppCompatActivity {
             result = copyFile(input, output);
         }
         catch (java.io.IOException e) {
-            System.err.println("Opening file streams failed.\n" + e);
+            Log.e(LOG_TAG, "Opening file streams failed.\n" + e);
             result = false;
         }
 
@@ -87,7 +90,7 @@ public class TutorialActivity extends AppCompatActivity {
                 System.load(tmpLib);
             }
             catch (UnsatisfiedLinkError e) {
-                System.err.println("Native code library failed to load, the file does not exist.\n" + e);
+                Log.e(LOG_TAG, "Native code library failed to load, the file does not exist.\n" + e);
                 result = false;
             }
         }
@@ -153,7 +156,7 @@ public class TutorialActivity extends AppCompatActivity {
                 result = loadSharedLibrary(vgLibsPath, "libAmanithVG.so");
                 if (result) {
                     // load AmanithVG JNI wrapper
-                    result = loadSharedLibrary(vgLibsPath, "libAmanithVGJNI.so");
+                    result = loadSharedLibrary(vgLibsPath, "libAmanithVG-JNI.so");
                 }
             }
         }
@@ -180,7 +183,7 @@ public class TutorialActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(@NonNull Menu menu) {
 
         // build the menu
         menu.add(0, TUTORIAL_CHANGE_SPREAD_MODE_CMD, 0, "Change spread mode");
@@ -191,7 +194,7 @@ public class TutorialActivity extends AppCompatActivity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
 
         boolean result = view.tutorialMenuOption(item.getItemId());
 

@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -27,7 +27,7 @@ import static javax.microedition.khronos.openvg.VG11.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath textLine;
     private VGPath textCurve;
@@ -42,24 +42,19 @@ class Tutorial {
     private static final String wavyText = "OpenVG text example";
     private float wavyTextFontSize;
     // control points (2 for straight text, 4 for wavy text)
-    private PointF[] controlPoints;
+    private final PointF[] controlPoints;
     private float controlPointsRadius;
     private int pickedControlPoint;
     boolean mustUpdatePathsAndFont;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
 
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
-
     private static final int CONTROL_POINT_NONE = -1;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         textLine = null;
@@ -76,8 +71,6 @@ class Tutorial {
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
         mustUpdatePathsAndFont = false;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -167,20 +160,14 @@ class Tutorial {
                                      final int surfaceHeight) {
 
         // straight text parameters
-        controlPoints[0].x = (float)surfaceWidth * 0.1f;
-        controlPoints[0].y = (float)surfaceHeight * 0.8f;
-        controlPoints[1].x = (float)surfaceWidth * 0.9f;
-        controlPoints[1].y = controlPoints[0].y;
+        controlPoints[0].set((float)surfaceWidth * 0.1f, (float)surfaceHeight * 0.8f);
+        controlPoints[1].set((float)surfaceWidth * 0.9f, controlPoints[0].y);
 
         // wavy text parameters
-        controlPoints[2].x = (float)surfaceWidth * 0.1f;
-        controlPoints[2].y = (float)surfaceHeight * 0.2f;
-        controlPoints[3].x = (float)surfaceWidth * 0.35f;
-        controlPoints[3].y = (float)surfaceHeight * 0.6f;
-        controlPoints[4].x = (float)surfaceWidth * 0.65f;
-        controlPoints[4].y = controlPoints[2].y;
-        controlPoints[5].x = (float)surfaceWidth * 0.9f;
-        controlPoints[5].y = controlPoints[3].y;
+        controlPoints[2].set((float)surfaceWidth * 0.1f, (float)surfaceHeight * 0.2f);
+        controlPoints[3].set((float)surfaceWidth * 0.35f, (float)surfaceHeight * 0.6f);
+        controlPoints[4].set((float)surfaceWidth * 0.65f, controlPoints[2].y);
+        controlPoints[5].set((float)surfaceWidth * 0.9f, controlPoints[3].y);
 
         // update OpenVG paths
         updatePaths();
@@ -192,7 +179,7 @@ class Tutorial {
               int surfaceHeight) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -240,12 +227,10 @@ class Tutorial {
 
         int i;
         float[] glyphOrigin = new float[] { 0.0f, 0.0f };
-        float[] straightTextDir = new float[] {
-            controlPoints[1].x - controlPoints[0].x,
-            controlPoints[1].y - controlPoints[0].y
-        };
+        PointF straightTextDir = new PointF(controlPoints[1].x - controlPoints[0].x,
+                                            controlPoints[1].y - controlPoints[0].y);
         // calculate text rotation (radians)
-        float rotation = (float)Math.atan2(straightTextDir[Y_COORD], straightTextDir[X_COORD]);
+        float rotation = (float)Math.atan2(straightTextDir.y, straightTextDir.x);
 
         vg.vgSetPaint(solidCol, VG_FILL_PATH);
         vg.vgSetColor(solidCol, 0x2C92FAFF);
@@ -340,9 +325,6 @@ class Tutorial {
         }
         // check if we have picked a control point
         pickedControlPoint = ((closestPoint >= 0) && (minDist < controlPointsRadius * 1.1f)) ? closestPoint : CONTROL_POINT_NONE;
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -359,16 +341,12 @@ class Tutorial {
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
                 // assign the new control point position
-                controlPoints[pickedControlPoint].x = x;
-                controlPoints[pickedControlPoint].y = y;
+                controlPoints[pickedControlPoint].set(x, y);
                 // we update paths and font within the 'draw' method, in order to
                 // stick to the rendering thread
                 mustUpdatePathsAndFont = true;
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

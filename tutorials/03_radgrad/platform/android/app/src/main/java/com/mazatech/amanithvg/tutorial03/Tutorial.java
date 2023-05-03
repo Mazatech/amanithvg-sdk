@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -15,6 +15,9 @@
  ****************************************************************************/
 package com.mazatech.amanithvg.tutorial03;
 
+import android.graphics.PointF;
+import android.support.annotation.NonNull;
+
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
@@ -25,7 +28,7 @@ import static javax.microedition.khronos.openvg.VG11Ext.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath filledCircle;
     private VGPath controlPoint;
@@ -34,35 +37,32 @@ class Tutorial {
     private VGPaint solidCol;
     private VGPaint radGrad;
     // radial gradient parameters
-    private float[] radGradCenter;
-    private float[] radGradFocus;
+    private final PointF radGradCenter;
+    private final PointF radGradFocus;
     private float radGradRadius;
+    // keep track if new gradient parameters must be uploaded to the OpenVG backend
+    private boolean updatePoints;
     // current paint states
     private boolean linearInterpolation;
     private boolean smoothRampSupported;
     private int spreadMode;
     // keep track of "path user to surface" transformation
     private float userToSurfaceScale;
-    private float[] userToSurfaceTranslation;
+    private final PointF userToSurfaceTranslation;
     private float controlPointsRadius;
     private int pickedHandle;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
-
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
 
     private static final int GRADIENT_HANDLE_NONE = 0;
     private static final int GRADIENT_HANDLE_CENTER = 1;
     private static final int GRADIENT_HANDLE_FOCUS = 2;
     private static final int GRADIENT_HANDLE_RADIUS = 3;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         filledCircle = null;
@@ -70,18 +70,17 @@ class Tutorial {
         radiusBorder = null;
         solidCol = null;
         radGrad = null;
-        radGradCenter = new float[] { 0.0f, 0.0f };
-        radGradFocus = new float[] { 0.0f, 0.0f };
+        radGradCenter = new PointF(0.0f, 0.0f);
+        radGradFocus = new PointF(0.0f, 0.0f);
         radGradRadius = 0.0f;
+        updatePoints = false;
         linearInterpolation = true;
         smoothRampSupported = false;
         spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         userToSurfaceScale = 1.0f;
-        userToSurfaceTranslation = new float[] { 0.0f, 0.0f };
+        userToSurfaceTranslation = new PointF(0.0f, 0.0f);
         controlPointsRadius = 14.0f;
         pickedHandle = GRADIENT_HANDLE_NONE;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -111,63 +110,71 @@ class Tutorial {
         int halfDim = (surfaceWidth < surfaceHeight) ? (surfaceWidth / 2) : (surfaceHeight / 2);
 
         userToSurfaceScale = (float)halfDim * 0.9f;
-        userToSurfaceTranslation[X_COORD] = (float)(surfaceWidth / 2);
-        userToSurfaceTranslation[Y_COORD] = (float)(surfaceHeight / 2);
+        userToSurfaceTranslation.set((float)(surfaceWidth / 2), (float)(surfaceHeight / 2));
     }
 
     // calculate the position of radial gradient control points (and radius), in surface space
-    private float gradientParamsGet(float[] srfCenterPoint,
-                                    float[] srfFocusPoint) {
+    private float gradientParamsGet(@NonNull PointF srfCenterPoint,
+                                    @NonNull PointF srfFocusPoint) {
 
         // center point (apply the "path user to surface" transformation)
-        srfCenterPoint[X_COORD] = (radGradCenter[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfCenterPoint[Y_COORD] = (radGradCenter[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfCenterPoint.x = (radGradCenter.x * userToSurfaceScale) + userToSurfaceTranslation.x;
+        srfCenterPoint.y = (radGradCenter.y * userToSurfaceScale) + userToSurfaceTranslation.y;
         // focus point (apply the "path user to surface" transformation)
-        srfFocusPoint[X_COORD] = (radGradFocus[X_COORD] * userToSurfaceScale) + userToSurfaceTranslation[X_COORD];
-        srfFocusPoint[Y_COORD] = (radGradFocus[Y_COORD] * userToSurfaceScale) + userToSurfaceTranslation[Y_COORD];
+        srfFocusPoint.x = (radGradFocus.x * userToSurfaceScale) + userToSurfaceTranslation.x;
+        srfFocusPoint.y = (radGradFocus.y * userToSurfaceScale) + userToSurfaceTranslation.y;
         // radius (it is enough to apply just the inverse scale)
         return radGradRadius * userToSurfaceScale;
     }
 
     // set the position of radial gradient control points (and radius), in surface space
-    private void gradientParamsSet(final float[] srfCenterPoint,
-                                   final float[] srfFocusPoint,
+    private void gradientParamsSet(@NonNull final PointF srfCenterPoint,
+                                   @NonNull final PointF srfFocusPoint,
                                    final float srfRadius) {
 
-        // radial gradient parameters
-        float radGradParams[] = new float[5];
-
         // apply the inverse "path user to surface" transformation
-        radGradCenter[X_COORD] = (srfCenterPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        radGradCenter[Y_COORD] = (srfCenterPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
-        radGradFocus[X_COORD] = (srfFocusPoint[X_COORD] - userToSurfaceTranslation[X_COORD]) / userToSurfaceScale;
-        radGradFocus[Y_COORD] = (srfFocusPoint[Y_COORD] - userToSurfaceTranslation[Y_COORD]) / userToSurfaceScale;
+        radGradCenter.x = (srfCenterPoint.x - userToSurfaceTranslation.x) / userToSurfaceScale;
+        radGradCenter.y = (srfCenterPoint.y - userToSurfaceTranslation.y) / userToSurfaceScale;
+        radGradFocus.x = (srfFocusPoint.x - userToSurfaceTranslation.x) / userToSurfaceScale;
+        radGradFocus.y = (srfFocusPoint.y - userToSurfaceTranslation.y) / userToSurfaceScale;
         radGradRadius = srfRadius / userToSurfaceScale;
 
-        // upload new gradient parameters to the OpenVG backend
-        radGradParams[0] = radGradCenter[X_COORD];
-        radGradParams[1] = radGradCenter[Y_COORD];
-        radGradParams[2] = radGradFocus[X_COORD];
-        radGradParams[3] = radGradFocus[Y_COORD];
-        radGradParams[4] = radGradRadius;
-        vg.vgSetParameterfv(radGrad, VG_PAINT_RADIAL_GRADIENT, 5, radGradParams);
+        // we need to upload new gradient parameters to the OpenVG backend
+        // NB: must be performed within the rendering thread at the next 'draw' call
+        updatePoints = true;
     }
 
     // reset gradient parameters
     private void gradientParamsReset(final int surfaceWidth,
                                      final int surfaceHeight) {
 
-        float[] gradCenter = new float[] { (float)surfaceWidth * 0.5f, (float)surfaceHeight * 0.5f };
-        float[] gradFocus = new float[] { (float)surfaceWidth * 0.65f, (float)surfaceHeight * 0.5f };
-        float gradRadius = ((float)(surfaceWidth < surfaceHeight ? surfaceWidth : surfaceHeight)) * 0.3f;
+        float minDimension = (float)Math.min(surfaceWidth, surfaceHeight);
+        float gradRadius = minDimension * 0.35f;
+        PointF gradCenter = new PointF((float)surfaceWidth * 0.5f, (float)surfaceHeight * 0.5f);
+        PointF gradFocus = new PointF(gradCenter.x + (gradRadius * 0.5f), gradCenter.y);
         gradientParamsSet(gradCenter, gradFocus, gradRadius);
+    }
+
+    // upload new gradient parameters to the OpenVG backend
+    private void gradientParamsUpload() {
+
+        // radial gradient parameters
+        float[] radGradParams = new float[] {
+            radGradCenter.x,
+            radGradCenter.y,
+            radGradFocus.x,
+            radGradFocus.y,
+            radGradRadius
+        };
+
+        vg.vgSetParameterfv(radGrad, VG_PAINT_RADIAL_GRADIENT, 5, radGradParams);
     }
 
     private void genPaints() {
 
-        float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+        float[] white = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
         // radial gradient color keys
-        float colKeys[] = new float[] {
+        float[] colKeys = new float[] {
             0.00f, 0.40f, 0.00f, 0.60f, 1.00f,
             0.25f, 0.90f, 0.50f, 0.10f, 1.00f,
             0.50f, 0.80f, 0.80f, 0.00f, 1.00f,
@@ -205,7 +212,7 @@ class Tutorial {
               int surfaceHeight) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.2f, 0.2f, 1.0f };
 
         // make sure to have well visible (and draggable) control points
         controlPointsRadius = ((float)Math.min(surfaceWidth, surfaceHeight) / 512.0f) * 14.0f;
@@ -256,21 +263,28 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        float gradCenter[] = new float[2];
-        float gradFocus[] = new float[2];
+        PointF gradCenter = new PointF();
+        PointF gradFocus = new PointF();
         float gradRadius;
 
         // clear the whole drawing surface
         vg.vgClear(0, 0, surfaceWidth, surfaceHeight);
+
+        // upload new gradient parameters to the OpenVG backend, if needed
+        if (updatePoints) {
+            gradientParamsUpload();
+            updatePoints = false;
+        }
 
         // calculate "path user to surface" transformation
         userToSurfaceCalc(surfaceWidth, surfaceHeight);
         // upload "path user to surface" transformation to the OpenVG backend
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(userToSurfaceTranslation[X_COORD], userToSurfaceTranslation[Y_COORD]);
+        vg.vgTranslate(userToSurfaceTranslation.x, userToSurfaceTranslation.y);
         vg.vgScale(userToSurfaceScale, userToSurfaceScale);
         // draw the filled circle
+        vg.vgSetParameteri(radGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
         vg.vgSetPaint(radGrad, VG_FILL_PATH);
         vg.vgDrawPath(filledCircle, VG_FILL_PATH);
 
@@ -281,10 +295,10 @@ class Tutorial {
         vg.vgSetPaint(solidCol, VG_STROKE_PATH);
         vg.vgSetf(VG_STROKE_LINE_WIDTH, 2.0f);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradCenter[X_COORD], gradCenter[Y_COORD]);
+        vg.vgTranslate(gradCenter.x, gradCenter.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradFocus[X_COORD], gradFocus[Y_COORD]);
+        vg.vgTranslate(gradFocus.x, gradFocus.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
 
         // draw radial gradient radius border; because the stroke will be scaled according to the
@@ -292,7 +306,7 @@ class Tutorial {
         // always a 2 pixels wide outline
         vg.vgSetf(VG_STROKE_LINE_WIDTH, 2.0f / gradRadius);
         vg.vgLoadIdentity();
-        vg.vgTranslate(gradCenter[X_COORD], gradCenter[Y_COORD]);
+        vg.vgTranslate(gradCenter.x, gradCenter.y);
         vg.vgScale(gradRadius, gradRadius);
         vg.vgDrawPath(radiusBorder, VG_STROKE_PATH);
     }
@@ -328,9 +342,6 @@ class Tutorial {
         else {
             spreadMode = VG_COLOR_RAMP_SPREAD_PAD;
         }
-
-        // upload the new spread mode to the OpenVG backend
-        vg.vgSetParameteri(radGrad, VG_PAINT_COLOR_RAMP_SPREAD_MODE, spreadMode);
     }
 
     /*****************************************************************
@@ -339,13 +350,13 @@ class Tutorial {
     void touchDown(float x,
                    float y) {
 
-        float gradCenter[] = new float[2];
-        float gradFocus[] = new float[2];
+        PointF gradCenter = new PointF();
+        PointF gradFocus = new PointF();
         // get current gradient parameters
         float gradRadius = gradientParamsGet(gradCenter, gradFocus);
         // calculate mouse distance from center, focus and radius border
-        float distCenter = distance(x, y, gradCenter[X_COORD], gradCenter[Y_COORD]);
-        float distFocus = distance(x, y, gradFocus[X_COORD], gradFocus[Y_COORD]);
+        float distCenter = distance(x, y, gradCenter.x, gradCenter.y);
+        float distFocus = distance(x, y, gradFocus.x, gradFocus.y);
         float distRadius = Math.abs(distCenter - gradRadius);
         // check if we have picked a gradient control point or the radius border
         if ((distCenter < distFocus) && (distCenter < distRadius)) {
@@ -358,11 +369,6 @@ class Tutorial {
         else {
             pickedHandle = (distRadius < controlPointsRadius * 1.1f) ? GRADIENT_HANDLE_RADIUS : GRADIENT_HANDLE_NONE;
         }
-
-
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -379,32 +385,30 @@ class Tutorial {
         if (touchState == TOUCH_MODE_DOWN) {
             if (pickedHandle != GRADIENT_HANDLE_NONE) {
                 // get current gradient parameters
-                float gradCenter[] = new float[2];
-                float gradFocus[] = new float[2];
+                PointF gradCenter = new PointF();
+                PointF gradFocus = new PointF();
                 float gradRadius = gradientParamsGet(gradCenter, gradFocus);
                 if (pickedHandle == GRADIENT_HANDLE_CENTER) {
-                    float distFocus = distance(x, y, gradFocus[X_COORD], gradFocus[Y_COORD]);
+                    float distFocus = distance(x, y, gradFocus.x, gradFocus.y);
                     // we move the center, if the focus still remains inside the gradient
                     if (distFocus < gradRadius * 0.99f) {
                         // assign the new center
-                        gradCenter[X_COORD] = x;
-                        gradCenter[Y_COORD] = y;
+                        gradCenter.set(x, y);
                     }
                 }
                 else
                 if (pickedHandle == GRADIENT_HANDLE_FOCUS) {
-                    float distCenter = distance(x, y, gradCenter[X_COORD], gradCenter[Y_COORD]);
+                    float distCenter = distance(x, y, gradCenter.x, gradCenter.y);
                     // we move the focus, if it still remains inside the gradient
                     if (distCenter < gradRadius * 0.99f) {
                         // assign the new focus
-                        gradFocus[X_COORD] = x;
-                        gradFocus[Y_COORD] = y;
+                        gradFocus.set(x, y);
                     }
                 }
                 else {
-                    float newRadius = distance(x, y, gradCenter[X_COORD], gradCenter[Y_COORD]);
+                    float newRadius = distance(x, y, gradCenter.x, gradCenter.y);
                     if (newRadius > 16.0f) {
-                        float distCenterFocus = distance(gradCenter[X_COORD], gradCenter[Y_COORD], gradFocus[X_COORD], gradFocus[Y_COORD]);
+                        float distCenterFocus = distance(gradCenter.x, gradCenter.y, gradFocus.x, gradFocus.y);
                         // we update the radius, if the gradient still contains the focus
                         if (distCenterFocus < newRadius * 0.99f) {
                             // assign the new radius
@@ -416,9 +420,6 @@ class Tutorial {
                 gradientParamsSet(gradCenter, gradFocus, gradRadius);
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

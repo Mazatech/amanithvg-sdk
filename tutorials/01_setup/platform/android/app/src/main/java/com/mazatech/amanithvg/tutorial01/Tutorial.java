@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -26,7 +26,7 @@ import static javax.microedition.khronos.openvg.VG11Ext.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // the clover-like path
     private VGPath path;
     // paint objects
@@ -53,7 +53,7 @@ class Tutorial {
     // current transformation
     private float rotation;
     private float scale;
-    private float[] translation;
+    private final float[] translation;
 
     private static final int PAINT_COLOR   = 0;
     private static final int PAINT_LINGRAD = 1;
@@ -64,7 +64,7 @@ class Tutorial {
     private static final int PATTERN_WIDTH  = 64;
     private static final int PATTERN_HEIGHT = 64;
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         path = null;
@@ -103,11 +103,11 @@ class Tutorial {
 
     private void genPaints() {
 
-        float col[] = new float[4];
-        float colKeys[] = new float[25];
-        float linGradParams[] = new float[4];
-        float radGradParams[] = new float[5];
-        float conGradParams[] = new float[5];
+        float[] col = new float[4];
+        float[] colKeys = new float[25];
+        float[] linGradParams = new float[4];
+        float[] radGradParams = new float[5];
+        float[] conGradParams = new float[5];
 
         // generate paint objects
         color = vg.vgCreatePaint();
@@ -171,7 +171,7 @@ class Tutorial {
 
         // pattern
         patternImage = vg.vgCreateImage(VG_sRGBA_8888_PRE, PATTERN_WIDTH, PATTERN_HEIGHT, VG_IMAGE_QUALITY_FASTER);
-        int pixels[] = new int[PATTERN_WIDTH * PATTERN_HEIGHT];
+        int[] pixels = new int[PATTERN_WIDTH * PATTERN_HEIGHT];
         for (int i = 0; i < PATTERN_HEIGHT; ++i) {
             for (int j = 0; j < PATTERN_WIDTH; ++j) {
                 if (i < PATTERN_HEIGHT / 2) {
@@ -190,7 +190,7 @@ class Tutorial {
 
     private void genPaths() {
 
-        byte commands[] = new byte[] {
+        byte[] commands = new byte[] {
             VG_MOVE_TO,
             VG_CUBIC_TO,
             VG_CUBIC_TO,
@@ -199,7 +199,7 @@ class Tutorial {
             VG_CLOSE_PATH
         };
 
-        float coordinates[] = new float[] {
+        float[] coordinates = new float[] {
             // move to
             236.0f, 276.0f,
             // cubic to
@@ -223,7 +223,7 @@ class Tutorial {
 
         if (alphaImage != null) {
             // allocate pixels to be passed to OpenVG mask
-            byte alphaPixels[] = new byte[surfaceWidth * surfaceHeight];
+            byte[] alphaPixels = new byte[surfaceWidth * surfaceHeight];
             // generate a sort of circular gradient (opaque at the center, transparent at the external border)
             float radius = (surfaceWidth < surfaceHeight) ? (float)(surfaceWidth / 4) : (float)(surfaceHeight / 4);
             float radiusSqr = radius * radius;
@@ -249,8 +249,8 @@ class Tutorial {
               int surfaceHeight) {
 
         // an opaque dark grey
-        float clearColor[] = new float[] { 0.2f, 0.3f, 0.4f, 1.0f };
-        float tileColor[] = new float[] { 0.1f, 0.6f, 0.3f, 1.0f };
+        float[] clearColor = new float[] { 0.2f, 0.3f, 0.4f, 1.0f };
+        float[] tileColor = new float[] { 0.1f, 0.6f, 0.3f, 1.0f };
 
         // check for OpenVG extensions
         extensionsCheck();
@@ -271,7 +271,6 @@ class Tutorial {
         vg.vgSeti(VG_BLEND_MODE, VG_BLEND_SRC);
         // upload scissor rectangles to the OpenVG backend
         toggleScissorRects(surfaceWidth, surfaceHeight);
-
     }
 
     void destroy() {
@@ -460,7 +459,7 @@ class Tutorial {
 
         if (conGradSupported) {
             if (conGradRepeats > 1) {
-                float conGradParams[] = new float[5];
+                float[] conGradParams = new float[5];
                 // decrease repeats
                 conGradRepeats--;
                 conGradParams[0] = 256.0f; conGradParams[1] = 256.0f;
@@ -476,7 +475,7 @@ class Tutorial {
 
         if (conGradSupported) {
             if (conGradRepeats < 4) {
-                float conGradParams[] = new float[5];
+                float[] conGradParams = new float[5];
                 // increase repeats
                 conGradRepeats++;
                 conGradParams[0] = 256.0f; conGradParams[1] = 256.0f;
@@ -504,14 +503,14 @@ class Tutorial {
                             int surfaceHeight) {
 
         // first set of scissor rectangles
-        int scsRectsCfg0[] = new int[] {
+        int[] scsRectsCfg0 = new int[] {
             60, 60, 156, 156,
             60, 296, 156, 156,
             296, 60, 156, 156,
             296, 296, 156, 156
         };
         // second set of scissor rectangles
-        int scsRectsCfg1[] = new int[] {
+        int[] scsRectsCfg1 = new int[] {
             22, 22, 156, 332,
             22, 334, 332, 156,
             178, 22, 332, 156,
@@ -520,7 +519,7 @@ class Tutorial {
 
         // select rectangles configuration
         scissorRectsConf++;
-        int scsRects[] = ((scissorRectsConf & 1) != 0) ? scsRectsCfg0 : scsRectsCfg1;
+        int[] scsRects = ((scissorRectsConf & 1) != 0) ? scsRectsCfg0 : scsRectsCfg1;
         for (int i = 0; i < 16; ++i) {
             scsRects[i] = ((i & 1) != 0) ? (int)Math.floor(((scsRects[i] / 512.0f) * (float)surfaceHeight) + 0.5f)
                                          : (int)Math.floor(((scsRects[i] / 512.0f) * (float)surfaceWidth) + 0.5f);

@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -42,14 +42,12 @@
     EAGLContext* eaglContext;
     // DisplayLink
     CADisplayLink* displayLink;
-    // framebuffers (resolved and multi-sampled)
-    GLuint resolvedFrameBuffer;
-    GLuint sampledFrameBuffer;
-    // OpenGL ES color buffers (resolved and multi-sampled)
-    GLuint resolvedColorRenderBuffer;
-    GLuint sampledColorRenderBuffer;
-    // OpenGL ES depth buffer (multi-sampled)
-    GLuint sampledDepthRenderBuffer;
+    // OpenGL ES framebuffer
+    GLuint frameBuffer;
+    // OpenGL ES color buffer
+    GLuint colorRenderBuffer;
+    // OpenGL ES depth buffer
+    GLuint depthRenderBuffer;
 #endif
     // keep track of backing bounds
     int colorRenderBufferWidth;

@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -71,37 +71,63 @@ VGuint framesCounter;
 static VGboolean openvgInit(const VGuint width,
                             const VGuint height) {
 
-    // create an OpenVG context
-    vgContext = vgPrivContextCreateMZT(NULL);
-    if (!vgContext) {
-        return VG_FALSE;
+    VGboolean ok;
+
+    // set quality parameters (range is [0; 100], where 100 represents the best quality)
+    vgConfigSetMZT(VG_CONFIG_CURVES_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_RADIAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_CONICAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    // set other parameters, if desired, before to call vgInitializeMZT
+
+    // initialize AmanithVG
+    ok = vgInitializeMZT();
+
+    if (ok) {
+        // create an OpenVG context
+        vgContext = vgPrivContextCreateMZT(NULL);
+        if (vgContext != NULL) {
+            // create a window surface (sRGBA premultiplied color space)
+            vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
+            if (vgWindowSurface != NULL) {
+                // bind context and surface
+                ok = vgPrivMakeCurrentMZT(vgContext, vgWindowSurface);
+            }
+            else {
+                // error when creating the drawing surface
+                ok = VG_FALSE;
+            }
+        }
+        else {
+            // error when creating the context
+            ok = VG_FALSE;
+        }
     }
 
-    // create a window surface (sRGBA premultiplied color space)
-    vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
-    if (!vgWindowSurface) {
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
+    // is something went wrong, release allocated OpenVG resources
+    if (!ok) {
+        if (vgWindowSurface != NULL) {
+            vgPrivSurfaceDestroyMZT(vgWindowSurface);
+        }
+        if (vgContext != NULL) {
+            vgPrivContextDestroyMZT(vgContext);
+        }
+        // terminate AmanithVG
+        vgTerminateMZT();
     }
 
-    // bind context and surface
-    if (vgPrivMakeCurrentMZT(vgContext, vgWindowSurface) == VG_FALSE) {
-        vgPrivSurfaceDestroyMZT(vgWindowSurface);
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
-    }
-
-    return VG_TRUE;
+    return ok;
 }
 
 static void openvgDestroy(void) {
-    
+
     // unbind context and surface
     vgPrivMakeCurrentMZT(NULL, NULL);
     // destroy OpenVG surface
     vgPrivSurfaceDestroyMZT(vgWindowSurface);
     // destroy OpenVG context
     vgPrivContextDestroyMZT(vgContext);
+    // terminate AmanithVG
+    vgTerminateMZT();
 }
 
 // get the width of OpenVG drawing surface, in pixels
@@ -119,7 +145,7 @@ static VGint openvgSurfaceHeightGet(void) {
 // get the maximum surface dimension supported by the OpenVG backend
 static VGint openvgSurfaceMaxDimensionGet(void) {
 
-    return vgPrivSurfaceMaxDimensionGetMZT();
+    return (VGint)vgConfigGetMZT(VG_CONFIG_MAX_SURFACE_DIMENSION_MZT);
 }
 
 /*****************************************************************

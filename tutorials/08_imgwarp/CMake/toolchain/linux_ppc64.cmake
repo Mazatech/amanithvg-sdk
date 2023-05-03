@@ -25,7 +25,7 @@ set(LINUX_COMMON_C_FLAGS "-O2 -ffast-math -fno-exceptions -fno-strict-aliasing -
 set(LINUX_COMMON_CXX_FLAGS "${LINUX_COMMON_C_FLAGS} -fno-rtti")
 
 # architecture specific flags
-set(LINUX_ARCH_C_FLAGS "-mcpu=powerpc64 -mtune=powerpc64 -mlittle-endian")
+set(LINUX_ARCH_C_FLAGS "-mcpu=powerpc64le -mtune=powerpc64le -mlittle-endian")
 
 # flags for Release build type or configuration
 set(CMAKE_C_FLAGS_RELEASE "${LINUX_COMMON_C_FLAGS} ${LINUX_ARCH_C_FLAGS}" CACHE STRING "Compiler C flags used by release builds for Linux ppc64el")

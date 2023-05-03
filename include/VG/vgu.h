@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -75,13 +75,17 @@ typedef enum {
     VGU_ILLEGAL_ARGUMENT_ERROR                   = 0xF001,
     VGU_OUT_OF_MEMORY_ERROR                      = 0xF002,
     VGU_PATH_CAPABILITY_ERROR                    = 0xF003,
-    VGU_BAD_WARP_ERROR                           = 0xF004
+    VGU_BAD_WARP_ERROR                           = 0xF004,
+
+    VGU_ERROR_CODE_FORCE_SIZE                    = VG_MAX_ENUM
 } VGUErrorCode;
 
 typedef enum {
     VGU_ARC_OPEN                                 = 0xF100,
     VGU_ARC_CHORD                                = 0xF101,
-    VGU_ARC_PIE                                  = 0xF102
+    VGU_ARC_PIE                                  = 0xF102,
+
+    VGU_ARC_TYPE_FORCE_SIZE                      = VG_MAX_ENUM
 } VGUArcType;
 
 VGU_API_CALL VGUErrorCode VGU_API_ENTRY vguLine(VGPath path,

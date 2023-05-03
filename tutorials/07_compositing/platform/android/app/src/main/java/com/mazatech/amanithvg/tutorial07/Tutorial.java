@@ -1,5 +1,5 @@
 /****************************************************************************
- ** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+ ** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
  **
  ** This file is part of AmanithVG software, an OpenVG implementation.
  **
@@ -17,8 +17,6 @@ package com.mazatech.amanithvg.tutorial07;
 
 import android.graphics.PointF;
 
-import java.util.Random;
-
 import javax.microedition.khronos.openvg.AmanithVG;
 import javax.microedition.khronos.openvg.VGPaint;
 import javax.microedition.khronos.openvg.VGPath;
@@ -30,7 +28,7 @@ import static javax.microedition.khronos.openvg.VG11Ext.*;
 class Tutorial {
 
     // AmanithVG instance, passed through the constructor
-    private AmanithVG vg;
+    private final AmanithVG vg;
     // path objects
     private VGPath flower;
     private VGPath controlPoint;
@@ -44,23 +42,19 @@ class Tutorial {
     private VGImage dstImage;
     private int imagesFormat;
     private int imagesSize;
-    private float[] srcImagePos;
-    private float[] dstImagePos;
+    private final PointF srcImagePos;
+    private final PointF dstImagePos;
+
     // current blend mode
     private int blendMode;
     private boolean extBlendModesSupported;
     private float controlPointsRadius;
     private int pickedControlPoint;
     // touch state
-    private float oldTouchX;
-    private float oldTouchY;
     private int touchState;
 
     private static final int TOUCH_MODE_NONE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
-
-    private static final int X_COORD = 0;
-    private static final int Y_COORD = 1;
 
     private static final int CONTROL_POINT_NONE = 0;
     private static final int CONTROL_POINT_SRC_IMAGE = 1;
@@ -68,7 +62,7 @@ class Tutorial {
 
     private static final float[] noDash = { 0 };
 
-    Tutorial(AmanithVG vgInstance) {
+    Tutorial(final AmanithVG vgInstance) {
 
         vg = vgInstance;
         flower = null;
@@ -81,14 +75,12 @@ class Tutorial {
         dstImage = null;
         imagesFormat = VG_sRGBA_8888_PRE;
         imagesSize = 0;
-        srcImagePos = new float[] { 0.0f, 0.0f };
-        dstImagePos = new float[] { 0.0f, 0.0f };
+        srcImagePos = new PointF(0.0f, 0.0f);
+        dstImagePos = new PointF(0.0f, 0.0f);
         blendMode = VG_BLEND_SRC_OVER;
         extBlendModesSupported = false;
         controlPointsRadius = 14.0f;
         pickedControlPoint = CONTROL_POINT_NONE;
-        oldTouchX = 0.0f;
-        oldTouchY = 0.0f;
         touchState = TOUCH_MODE_NONE;
     }
 
@@ -113,22 +105,22 @@ class Tutorial {
 
     private void genPaints() {
 
-        float white[] = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+        float[] white = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
         // color stops used to generate SRC image
-        float srcStops[] = new float[] {
+        float[] srcStops = new float[] {
             0.00f, 0.60f, 0.05f, 0.10f, 1.00f,
             1.00f, 0.30f, 0.90f, 0.10f, 0.30f
         };
-        float srcGrad[] = new float[] {
+        float[] srcGrad = new float[] {
             -160.0f, 0.0f,
              160.0f, 0.0f
         };
         // color stops used to generate DST image
-        float dstStops[] = new float[] {
+        float[] dstStops = new float[] {
             0.00f, 0.90f, 0.80f, 0.00f, 0.90f,
             1.00f, 0.00f, 0.20f, 0.80f, 0.40f
         };
-        float dstGrad[] = new float[] {
+        float[] dstGrad = new float[] {
             -160.0f, 0.0f,
              160.0f, 0.0f
         };
@@ -156,7 +148,7 @@ class Tutorial {
     private void genPaths() {
 
         // flower-like path commands
-        byte flowerCmds[] = new byte[] {
+        byte[] flowerCmds = new byte[] {
             VG_MOVE_TO,
             VG_CUBIC_TO,
             VG_CUBIC_TO,
@@ -165,7 +157,7 @@ class Tutorial {
             VG_CLOSE_PATH
         };
         // flower-like path coordinates
-        float flowerCoords[] = new float[] {
+        float[] flowerCoords = new float[] {
             // move to
             -20.0f, 20.0f,
             // cubic to
@@ -193,9 +185,9 @@ class Tutorial {
 
 
         float scl;
-        float black[] = new float[] { 0.0f, 0.0f, 0.0f, 0.0f };
+        float[] black = new float[] { 0.0f, 0.0f, 0.0f, 0.0f };
         float imgCenter =  (float)(imagesSize / 2);
-        int minDim = (surfaceWidth < surfaceHeight) ? surfaceWidth : surfaceHeight;
+        int minDim = Math.min(surfaceWidth, surfaceHeight);
 
         // 3/4 of the minimum surface dimension
         imagesSize = (minDim * 3) / 4;
@@ -238,10 +230,10 @@ class Tutorial {
         vg.vgDrawPath(flower, VG_FILL_PATH);
         vg.vgGetPixels(dstImage, 0, 0, 0, 0, imagesSize, imagesSize);
         // reset images position
-        srcImagePos[X_COORD] = imgCenter + (((float)surfaceWidth - imagesSize) / 4.0f);
-        srcImagePos[Y_COORD] = imgCenter + (((float)surfaceHeight - imagesSize) / 4.0f);
-        dstImagePos[X_COORD] = ((float)surfaceWidth - imgCenter) - (((float)surfaceWidth - imagesSize) / 4.0f);
-        dstImagePos[Y_COORD] = ((float)surfaceHeight - imgCenter) - (((float)surfaceHeight - imagesSize) / 4.0f);
+        srcImagePos.x = imgCenter + (((float)surfaceWidth - imagesSize) / 4.0f);
+        srcImagePos.y = imgCenter + (((float)surfaceHeight - imagesSize) / 4.0f);
+        dstImagePos.x = ((float)surfaceWidth - imgCenter) - (((float)surfaceWidth - imagesSize) / 4.0f);
+        dstImagePos.y = ((float)surfaceHeight - imgCenter) - (((float)surfaceHeight - imagesSize) / 4.0f);
         // update path used to draw images bounds
         vg.vgClearPath(imageBounds, VG_PATH_CAPABILITY_ALL);
         vg.vguRect(imageBounds, 0.0f, 0.0f, (float)imagesSize, (float)imagesSize);
@@ -300,10 +292,10 @@ class Tutorial {
     void draw(int surfaceWidth,
               int surfaceHeight) {
 
-        float dashPattern[] = new float[] { 10.0f, 10.0f };
+        float[] dashPattern = new float[] { 10.0f, 10.0f };
         float imgCenter = (float)(imagesSize / 2);
         // an opaque black
-        float clearColor[] = new float[] { 0.0f, 0.0f, 0.0f, 1.0f };
+        float[] clearColor = new float[] { 0.0f, 0.0f, 0.0f, 1.0f };
 
         // clear the whole drawing surface
         vg.vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
@@ -313,12 +305,12 @@ class Tutorial {
         vg.vgSeti(VG_BLEND_MODE, VG_BLEND_SRC);
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(dstImagePos[X_COORD] - imgCenter, dstImagePos[Y_COORD] - imgCenter);
+        vg.vgTranslate(dstImagePos.x - imgCenter, dstImagePos.y - imgCenter);
         vg.vgDrawImage(dstImage);
         // draw SRC image, setting the current blend mode
         vg.vgSeti(VG_BLEND_MODE, blendMode);
         vg.vgLoadIdentity();
-        vg.vgTranslate(srcImagePos[X_COORD] - imgCenter, srcImagePos[Y_COORD] - imgCenter);
+        vg.vgTranslate(srcImagePos.x - imgCenter, srcImagePos.y - imgCenter);
         vg.vgDrawImage(srcImage);
 
         // draw control points
@@ -328,20 +320,20 @@ class Tutorial {
         vg.vgSetPaint(solidCol, VG_STROKE_PATH);
         vg.vgSeti(VG_MATRIX_MODE, VG_MATRIX_PATH_USER_TO_SURFACE);
         vg.vgLoadIdentity();
-        vg.vgTranslate(dstImagePos[X_COORD], dstImagePos[Y_COORD]);
+        vg.vgTranslate(dstImagePos.x, dstImagePos.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(srcImagePos[X_COORD], srcImagePos[Y_COORD]);
+        vg.vgTranslate(srcImagePos.x, srcImagePos.y);
         vg.vgDrawPath(controlPoint, VG_STROKE_PATH);
 
         // draw images bounds
         vg.vgSetf(VG_STROKE_LINE_WIDTH, 1.0f);
         vg.vgSetfv(VG_STROKE_DASH_PATTERN, 2, dashPattern);
         vg.vgLoadIdentity();
-        vg.vgTranslate(dstImagePos[X_COORD] - imgCenter, dstImagePos[Y_COORD] - imgCenter);
+        vg.vgTranslate(dstImagePos.x - imgCenter, dstImagePos.y - imgCenter);
         vg.vgDrawPath(imageBounds, VG_STROKE_PATH);
         vg.vgLoadIdentity();
-        vg.vgTranslate(srcImagePos[X_COORD] - imgCenter, srcImagePos[Y_COORD] - imgCenter);
+        vg.vgTranslate(srcImagePos.x - imgCenter, srcImagePos.y - imgCenter);
         vg.vgDrawPath(imageBounds, VG_STROKE_PATH);
     }
 
@@ -431,18 +423,15 @@ class Tutorial {
         float distSrc, distDst;
 
         // calculate touch distance from control points
-        distSrc = distance(x, y, srcImagePos[X_COORD], srcImagePos[Y_COORD]);
-        distDst = distance(x, y, dstImagePos[X_COORD], dstImagePos[Y_COORD]);
+        distSrc = distance(x, y, srcImagePos.x, srcImagePos.y);
+        distDst = distance(x, y, dstImagePos.x, dstImagePos.y);
         // check if we have picked a gradient control point
         if (distSrc < distDst) {
-            pickedControlPoint = (distSrc < controlPointsRadius * 1.1f) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
+            pickedControlPoint = (distSrc < (controlPointsRadius * 1.1f)) ? CONTROL_POINT_SRC_IMAGE : CONTROL_POINT_NONE;
         }
         else {
-            pickedControlPoint = (distDst < controlPointsRadius * 1.1f) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
+            pickedControlPoint = (distDst < (controlPointsRadius * 1.1f)) ? CONTROL_POINT_DST_IMAGE : CONTROL_POINT_NONE;
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
         touchState = TOUCH_MODE_DOWN;
     }
 
@@ -460,18 +449,15 @@ class Tutorial {
             if (pickedControlPoint != CONTROL_POINT_NONE) {
                 // assign the new control point position
                 if (pickedControlPoint == CONTROL_POINT_SRC_IMAGE) {
-                    srcImagePos[X_COORD] = x;
-                    srcImagePos[Y_COORD] = y;
+                    srcImagePos.x = x;
+                    srcImagePos.y = y;
                 }
                 else {
-                    dstImagePos[X_COORD] = x;
-                    dstImagePos[Y_COORD] = y;
+                    dstImagePos.x = x;
+                    dstImagePos.y = y;
                 }
             }
         }
-        // keep track of current touch position
-        oldTouchX = x;
-        oldTouchY = y;
     }
 
     void touchDoubleTap(float x,

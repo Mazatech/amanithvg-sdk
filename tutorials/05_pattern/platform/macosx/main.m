@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -20,7 +20,6 @@
     // header shared between C code here, which executes Metal API commands, and .metal files, which uses these types as inputs to the shaders.
     #import "ShaderTypes.h"
 #else
-    #import <QuartzCore/CVDisplayLink.h>
     #import <OpenGL/OpenGL.h>
     #include <OpenGL/gl.h>
 #endif
@@ -63,8 +62,8 @@ VGboolean done;
     MTLTextureDescriptor* blitTextureDescriptor;
 #else
 @interface TutorialView : NSOpenGLView <NSWindowDelegate> {
-    // a Core Video display link 
-    CVDisplayLinkRef displayLink;
+    // a drawing loop timer
+    NSTimer* renderTimer;
 #endif
     // keep track of backing bounds
     VGint colorRenderBufferWidth;
@@ -90,27 +89,51 @@ VGboolean done;
 *****************************************************************/
 - (VGboolean) openvgInit :(const VGuint)width :(const VGuint)height {
 
-    // create an OpenVG context
-    vgContext = vgPrivContextCreateMZT(NULL);
-    if (!vgContext) {
-        return VG_FALSE;
+    VGboolean ok;
+
+    // set quality parameters (range is [0; 100], where 100 represents the best quality)
+    vgConfigSetMZT(VG_CONFIG_CURVES_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_RADIAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    vgConfigSetMZT(VG_CONFIG_CONICAL_GRADIENTS_QUALITY_MZT, 75.0f);
+    // set other parameters, if desired, before to call vgInitializeMZT
+
+    // initialize AmanithVG
+    ok = vgInitializeMZT();
+
+    if (ok) {
+        // create an OpenVG context
+        vgContext = vgPrivContextCreateMZT(NULL);
+        if (vgContext != NULL) {
+            // create a window surface (sRGBA premultiplied color space)
+            vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
+            if (vgWindowSurface != NULL) {
+                // bind context and surface
+                ok = vgPrivMakeCurrentMZT(vgContext, vgWindowSurface);
+            }
+            else {
+                // error when creating the drawing surface
+                ok = VG_FALSE;
+            }
+        }
+        else {
+            // error when creating the context
+            ok = VG_FALSE;
+        }
     }
 
-    // create a window surface (sRGBA premultiplied color space)
-    vgWindowSurface = vgPrivSurfaceCreateMZT(width, height, VG_FALSE, VG_TRUE, VG_TRUE);
-    if (!vgWindowSurface) {
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
+    // is something went wrong, release allocated OpenVG resources
+    if (!ok) {
+        if (vgWindowSurface != NULL) {
+            vgPrivSurfaceDestroyMZT(vgWindowSurface);
+        }
+        if (vgContext != NULL) {
+            vgPrivContextDestroyMZT(vgContext);
+        }
+        // terminate AmanithVG
+        vgTerminateMZT();
     }
 
-    // bind context and surface
-    if (vgPrivMakeCurrentMZT(vgContext, vgWindowSurface) == VG_FALSE) {
-        vgPrivSurfaceDestroyMZT(vgWindowSurface);
-        vgPrivContextDestroyMZT(vgContext);
-        return VG_FALSE;
-    }
-
-    return VG_TRUE;
+    return ok;
 }
 
 - (void) openvgDestroy {
@@ -121,6 +144,8 @@ VGboolean done;
     vgPrivSurfaceDestroyMZT(vgWindowSurface);
     // destroy OpenVG context
     vgPrivContextDestroyMZT(vgContext);
+    // terminate AmanithVG
+    vgTerminateMZT();
 }
 
 // get the width of OpenVG drawing surface, in pixels
@@ -145,7 +170,7 @@ VGboolean done;
 // get the maximum surface dimension supported by the OpenVG backend
 - (VGint) openvgSurfaceMaxDimensionGet {
 
-    return vgPrivSurfaceMaxDimensionGetMZT();
+    return (VGint)vgConfigGetMZT(VG_CONFIG_MAX_SURFACE_DIMENSION_MZT);
 }
 
 #ifdef AM_SRE
@@ -230,6 +255,7 @@ VGboolean done;
 
     // finalize rendering and push the command buffer to the GPU
     [commandBuffer commit];
+    [commandBuffer waitUntilCompleted];
     // acknowledge AmanithVG that we have performed a swapbuffers
     vgPostSwapBuffersMZT();
 }
@@ -339,37 +365,26 @@ VGboolean done;
 
 #else
 
-// Core Video display link
-- (CVReturn)getFrameForTime :(const CVTimeStamp *)outputTime {
+- (void) initRenderTimer {
 
-    // deltaTime is unused in this application, but here's how to calculate it using display link info
-    // double deltaTime = 1.0 / (outputTime->rateScalar * (double)outputTime->videoTimeScale / (double)outputTime->videoRefreshPeriod);
-    (void)outputTime;
-
-    // there is no autorelease pool when this method is called because it will be called from a background thread
-    // it's important to create one or app can leak objects
-    @autoreleasepool {
-        [self drawRect];
-    }
-
-    return kCVReturnSuccess;
+    // a 1ms time interval
+    renderTimer = [NSTimer timerWithTimeInterval:0.001
+                           target:self
+                           selector:@selector(renderTimerEvent:)
+                           userInfo:nil
+                           repeats:YES];
+ 
+    [[NSRunLoop currentRunLoop] addTimer:renderTimer forMode:NSDefaultRunLoopMode];
+    // ensure timer fires during resize
+    [[NSRunLoop currentRunLoop] addTimer:renderTimer forMode:NSEventTrackingRunLoopMode];
 }
 
-static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
-                                    const CVTimeStamp* now,
-                                    const CVTimeStamp* outputTime,
-                                    CVOptionFlags flagsIn,
-                                    CVOptionFlags* flagsOut,
-                                    void* displayLinkContext) {
+// timer callback method
+- (void) renderTimerEvent:(id)sender {
 
-    (void)displayLink;
-    (void)now;
-    (void)outputTime;
-    (void)flagsIn;
-    (void)flagsOut;
-    
-    CVReturn result = [(__bridge TutorialView*)displayLinkContext getFrameForTime:outputTime];
-    return result;
+    (void)sender;
+    // we draw from the main thread
+    [self drawRect];
 }
 
 // implementation of NSOpenGLView methods
@@ -417,8 +432,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // to [self openGLContext])
     [[self openGLContext] makeCurrentContext];
 
-    // do not synchronize buffer swaps with vertical refresh rate
-    GLint swapInt = 0;
+    // because we will render from timer events, in order to prevent frame
+    // tearing, lets synchronize buffer swaps with vertical refresh rate
+    // (see https://developer.apple.com/library/archive/qa/qa1385/_index.html)
+    GLint swapInt = 1;
     [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval];
 
     // get view dimensions in pixels, taking care of Retina display
@@ -431,19 +448,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         // init tutorial application (as a preferred image format, we pass the drawing surface one, in order to speedup "read pixels" operations and rendering)
         tutorialInit([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet], [self openvgSurfaceFormatGet]);
 
-        // create a display link capable of being used with all active displays
-        CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
-
-        // set the renderer output callback function
-        CVDisplayLinkSetOutputCallback(displayLink, &displayLinkCallback, (__bridge void*)self);
-
-        // set the display link for the current renderer
-        CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
-        CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
-        CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(displayLink, cglContext, cglPixelFormat);
-
-        // activate the display link
-        CVDisplayLinkStart(displayLink);
+        // activate the render timer
+        [self initRenderTimer];
 
         // start frame counter
         time0 = [self getTimeMS];
@@ -457,30 +463,22 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void) drawRect {
 
-    if ([self lockFocusIfCanDraw]) {
-    
-        [[self openGLContext] makeCurrentContext];
+    [[self openGLContext] makeCurrentContext];
 
-        // we draw on a secondary thread through the display link when resizing the view, -reshape is called automatically on the main thread
-        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
-        CGLLockContext([[self openGLContext] CGLContextObj]);
+    // NB: 'reshape' is called automatically on the main thread, we draw from
+    // the main thread, so there is no need to lock the context (CGLLockContext)
 
-        // draw OpenVG content
-        tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
+    // draw OpenVG content
+    tutorialDraw([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
 
-        // copy a double-buffered context’s back buffer to its front buffer
-        CGLFlushDrawable([[self openGLContext] CGLContextObj]);
+    // copy a double-buffered context’s back buffer to its front buffer
+    CGLFlushDrawable([[self openGLContext] CGLContextObj]);
 
-        // acknowledge AmanithVG that we have performed a swapbuffers
-        vgPostSwapBuffersMZT();
+    // acknowledge AmanithVG that we have performed a swapbuffers
+    vgPostSwapBuffersMZT();
 
-        // unlock the context
-        CGLUnlockContext([[self openGLContext] CGLContextObj]);
-        [self unlockFocus];
-
-        // advance the frames counter
-        framesCounter++;
-    }
+    // advance the frames counter
+    framesCounter++;
 }
 
 // this method is called whenever the window/control is reshaped, it is also called when the control is first opened
@@ -488,30 +486,22 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     [super reshape];
 
-    if ([self lockFocusIfCanDraw]) {
+    [[self openGLContext] makeCurrentContext];
 
-        [[self openGLContext] makeCurrentContext];
+    // NB: 'reshape' is called automatically on the main thread, we draw from
+    // the main thread, so there is no need to lock the context (CGLLockContext)
 
-        // we draw on a secondary thread through the display link, however, when resizing the view, -drawRect is called on the main thread
-        // add a mutex around to avoid the threads accessing the context simultaneously when resizing
-        CGLLockContext([[self openGLContext] CGLContextObj]);
+    // update the receiver's drawable object
+    [[self openGLContext] update];
 
-        // update the receiver's drawable object
-        [[self openGLContext] update];
-
-        // get view dimensions in pixels, taking care of Retina display
-        // see https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/EnablingOpenGLforHighResolution/EnablingOpenGLforHighResolution.html
-        NSRect backingBounds = [self convertRectToBacking:[self bounds]];
-        
-        // resize AmanithVG drawing surface
-        vgPrivSurfaceResizeMZT(vgWindowSurface, (VGint)backingBounds.size.width, (VGint)backingBounds.size.height);
-        // acknowledge tutorial about the resize
-        tutorialResize([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
-
-        // unlock the context
-        CGLUnlockContext([[self openGLContext] CGLContextObj]);
-        [self unlockFocus];
-    }
+    // get view dimensions in pixels, taking care of Retina display
+    // see https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/EnablingOpenGLforHighResolution/EnablingOpenGLforHighResolution.html
+    NSRect backingBounds = [self convertRectToBacking:[self bounds]];
+    
+    // resize AmanithVG drawing surface
+    vgPrivSurfaceResizeMZT(vgWindowSurface, (VGint)backingBounds.size.width, (VGint)backingBounds.size.height);
+    // acknowledge tutorial about the resize
+    tutorialResize([self openvgSurfaceWidthGet], [self openvgSurfaceHeightGet]);
 }
 
 #endif // AM_SRE
@@ -615,12 +605,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     [mtlCommandQueue release];
     mtlCommandQueue = nil;
 #else
-    // stop the display link BEFORE releasing anything in the view
-    // otherwise the display link thread may call into the view and crash
-    // when it encounters something that has been release
-    CVDisplayLinkStop(displayLink);
-    // release the display link
-    CVDisplayLinkRelease(displayLink);
+    // stop the render timer
+    [renderTimer invalidate];
 #endif
     // destroy OpenVG resources created by the tutorial
     tutorialDestroy();
@@ -771,10 +757,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 #ifdef AM_SRE
     // nothing to do
 #else
-    // Stop the display link when the window is closing because default
-    // OpenGL render buffers will be destroyed. If display link continues to
-    // fire without renderbuffers, OpenGL draw calls will set errors.
-    CVDisplayLinkStop(displayLink);
+    // stop the render timer
+    [renderTimer invalidate];
 #endif
     done = VG_TRUE;
 }

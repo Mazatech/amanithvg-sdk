@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -162,19 +162,31 @@ class AmanithVGJNI {
                                         VG11Ext
     -------------------------------------------------------------------------------*/
     // VG_MZT_clip_path
-    public final static native void vgClipPathPushMZT(int path);
+    public final static native void vgClipPathPushMZT(int path, boolean advanceLayer);
     public final static native void vgClipPathPopMZT();
     public final static native void vgClipPathClearMZT();
 
     // VG_MZT_filters
-    public final static native void vgColorMatrixMZT(int img, final float[] matrix, int offset);
+    public final static native void vgColorMatrixMZT(int dst, int src, final float[] matrix, int offset);
+    public final static native void vgGaussianBlurMZT(int dst, int src, final float[] axes, int offset, float stdDeviationX, float stdDeviationY, int tilingMode, boolean useFastApprox);
+    public final static native void vgLightingMZT(int dstDiffuse, int dstSpecular, int src, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, int lightType, final float[] lightData, int ldOffset);
+    public final static native void vgMorphologyMZT(int dst, int src, boolean erode, final float[] axes, int offset, int radiusX, int radiusY);
+    public final static native void vgTurbulenceMZT(int image, float biasX, float biasY, float scaleX, float scaleY, float baseFrequencyX, float baseFrequencyY, int numOctaves, int seed, boolean stitchTiles, boolean fractalNoise);
+    public final static native void vgDisplacementMapMZT(int dst, int src, int map, float scaleX, float scaleY, int tilingMode, int xChannelSelector, int yChannelSelector);
+    public final static native void vgCompositeMZT(int dst, int in1, int in2, int operation, float k1, float k2, float k3, float k4);
 
     // VG_MZT_mask
     public final static native void vgMaskMZT(int mask, int operation, int x, int y, int width, int height);
 
+    // Configuration parameters and thresholds
+    public final static native int vgConfigSetMZT(int config, float value);
+    public final static native float vgConfigGetMZT(int config);
+
+    // EGL-like layer
+    public final static native boolean vgInitializeMZT();
+    public final static native void vgTerminateMZT();
     public final static native long vgPrivContextCreateMZT(long sharedContext);
     public final static native void vgPrivContextDestroyMZT(long context);
-    public final static native int vgPrivSurfaceMaxDimensionGetMZT();
     public final static native long vgPrivSurfaceCreateMZT(int width, int height, boolean linearColorSpace, boolean alphaPremultiplied, boolean alphaMask);
     public final static native long vgPrivSurfaceCreateFromImageMZT(int image, boolean alphaMask);
     public final static native boolean vgPrivSurfaceResizeMZT(long surface, int width, int height);

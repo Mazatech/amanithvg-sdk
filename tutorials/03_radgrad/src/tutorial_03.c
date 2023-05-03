@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -155,9 +155,10 @@ static void gradientParamsSet(const VGfloat srfCenterPoint[],
 static void gradientParamsReset(const VGint surfaceWidth,
                                 const VGint surfaceHeight) {
 
+    VGfloat minDimension = (VGfloat)(surfaceWidth < surfaceHeight ? surfaceWidth : surfaceHeight);
+    VGfloat gradRadius = minDimension * 0.35f;
     VGfloat gradCenter[2] = { (VGfloat)surfaceWidth * 0.5f, (VGfloat)surfaceHeight * 0.5f };
-    VGfloat gradFocus[2] = { (VGfloat)surfaceWidth * 0.65f, (VGfloat)surfaceHeight * 0.5f };
-    VGfloat gradRadius = ((VGfloat)(surfaceWidth < surfaceHeight ? surfaceWidth : surfaceHeight)) * 0.3f;
+    VGfloat gradFocus[2] = { gradCenter[X_COORD] + (gradRadius * 0.5f), gradCenter[Y_COORD] };
     gradientParamsSet(gradCenter, gradFocus, gradRadius);
 }
 

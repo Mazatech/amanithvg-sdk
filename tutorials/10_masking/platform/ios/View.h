@@ -1,5 +1,5 @@
 /****************************************************************************
-** Copyright (C) 2004-2019 Mazatech S.r.l. All rights reserved.
+** Copyright (C) 2004-2023 Mazatech S.r.l. All rights reserved.
 **
 ** This file is part of AmanithVG software, an OpenVG implementation.
 **
@@ -23,7 +23,7 @@
     #include <OpenGLES/ES1/gl.h>
     #include <OpenGLES/ES1/glext.h>
 #endif
-#include "tutorial_07.h"
+#include "tutorial_10.h"
 
 #ifdef AM_SRE
 @interface View : MTKView <MTKViewDelegate, UIGestureRecognizerDelegate> {
