@@ -12,6 +12,6 @@
 
 - Removed builds relative to 32 bit architectures on iOS (ARMv7) and MacOS X (x86): now both iOS and MacOS X builds are Universal Binaries for arm64 (Apple Silicon) and x86_64 architectures
 
-- Tutorials have been have been improved from the point of view of compatibility with various building systems (CMake, Gradle)
+- Tutorials have been improved from the point of view of compatibility with various building systems (CMake, Gradle)
 
 - Lot of minor fixes and improvements
